@@ -3,15 +3,39 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import rasterio
+from numpy import ndarray
+from sklearn.ensemble import RandomForestClassifier
 
 
 def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Path, output_path: Path) -> None:
-    data, profile = read_geotiff(input_path)
+    input_data, profile = read_geotiff(input_path)
 
     labels, _ = read_geotiff(labels_path)
+    prediction_map = make_predictions(input_data, labels)
 
-    save(labels, output_path, profile)
+    save(prediction_map, output_path, profile)
+
+
+def make_predictions(input_data:ndarray, labels:ndarray) -> ndarray:
+    """Makes predictions by training a classifier and using it for inference."""
+    print(labels.shape)
+    class1_labels = labels[0]
+    flattened = class1_labels.flatten()
+    positive_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 1].transpose()
+    negative_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 0].transpose()
+    print('instances:', positive_instances.shape, negative_instances.shape)
+    train_data = np.concatenate((positive_instances, negative_instances))
+    train_labels = np.concatenate(((flattened[flattened == 1]), (flattened[flattened == 0])))
+    print('train data', train_labels.shape, train_data.shape)
+    classifier = RandomForestClassifier(n_estimators=100, random_state=0)
+    classifier.fit(train_data, train_labels)
+    predictions = classifier.predict_proba(input_data.reshape((input_data.shape[0], -1)).transpose())
+    print('predictions', predictions.shape, pd.DataFrame(predictions).value_counts())
+    prediction_map = predictions.transpose().reshape((predictions.shape[1], *input_data.shape[1:]))
+    print('prediction_map shape', prediction_map.shape)
+    return prediction_map
 
 
 def generate_train_labels(data: np.ndarray) -> np.ndarray:
@@ -60,4 +84,4 @@ if __name__ == '__main__':
     if False:  # Generate some dummy labels
         save(generate_train_labels(data), labels_path)
 
-    read_and_save_geotiff(input_path, labels, predictions_path)
+    read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path)
