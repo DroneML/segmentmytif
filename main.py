@@ -62,9 +62,9 @@ def save(data: np.ndarray, output_path: Path, profile) -> None:
 def parse_args():
     parser = argparse.ArgumentParser(description="Process input and output TIFF files.")
 
-    parser.add_argument('input', type=Path, help='Path to the input TIFF file')
-    parser.add_argument('labels', type=Path, help='Path to the training labels TIFF file')
-    parser.add_argument('predictions', type=Path, help='Path to the predictions output TIFF file')
+    parser.add_argument('-i', '--input', type=Path, help='Path to the input TIFF file')
+    parser.add_argument('-l', '--labels', type=Path, help='Path to the training labels TIFF file')
+    parser.add_argument('-p', '--predictions', type=Path, help='Path to the predictions output TIFF file')
 
     args = parser.parse_args()
 
