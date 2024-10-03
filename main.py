@@ -1,4 +1,5 @@
 import argparse
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -6,11 +7,20 @@ import numpy as np
 import pandas as pd
 import rasterio
 from numpy import ndarray
+from skimage.feature.haar import FEATURE_TYPE
 from sklearn.ensemble import RandomForestClassifier
 
 
-def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Path, output_path: Path) -> None:
+class FeatureType(Enum):
+    IDENTITY = 1
+    FLAIR = 2
+
+
+def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Path, output_path: Path,
+                                               feature_type=FeatureType.IDENTITY) -> None:
     input_data, profile = read_geotiff(input_path)
+
+    features = extract_features(input_data, feature_type)
 
     labels, _ = read_geotiff(labels_path)
     prediction_map = make_predictions(input_data, labels)
@@ -18,10 +28,33 @@ def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Pa
     save(prediction_map, output_path, profile)
 
 
-def make_predictions(input_data:ndarray, labels:ndarray) -> ndarray:
-    """Makes predictions by training a classifier and using it for inference."""
+def extract_features(input_data, feature_type):
+    extractor = {
+        FeatureType.IDENTITY: extract_identity_features,
+        FeatureType.FLAIR: extract_flair_features,
+    }[feature_type]
+
+    return extractor(input_data)
+
+
+def extract_identity_features(input_data):
+    return input_data
+
+
+def extract_flair_features(input_data):
+    raise NotImplemented()
+
+
+def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
+    """Makes predictions by training a classifier and using it for inference.
+
+    Expects input data with shape of [channels, width, height] and labels of shape [classes, width, height]
+        :param input_data: input data with shape of [channels, width, height]
+        :param labels: labels with shape [1, width, height]
+    :return: probabilities with shape [class_values, width, height]
+    """
     print(labels.shape)
-    class1_labels = labels[0]
+    class1_labels = labels[0]  # Only single class is supported
     flattened = class1_labels.flatten()
     positive_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 1].transpose()
     negative_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 0].transpose()
