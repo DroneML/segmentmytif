@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import rasterio
 from numpy import ndarray
-from skimage.feature.haar import FEATURE_TYPE
 from sklearn.ensemble import RandomForestClassifier
 
 
@@ -16,16 +15,32 @@ class FeatureType(Enum):
     FLAIR = 2
 
 
+def get_features_path(input_path : Path, features_type:FeatureType) -> Path:
+    if features_type == FeatureType.IDENTITY:
+        return input_path
+    return input_path.parent / f"{input_path.stem}_{features_type.name}{input_path.suffix}"
+
+
 def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Path, output_path: Path,
-                                               feature_type=FeatureType.IDENTITY) -> None:
+                                               feature_type=FeatureType.IDENTITY, features_path:Path=None) -> None:
     input_data, profile = read_geotiff(input_path)
 
-    features = extract_features(input_data, feature_type)
+    features = get_features(input_data, input_path, feature_type, features_path, profile)
 
     labels, _ = read_geotiff(labels_path)
-    prediction_map = make_predictions(input_data, labels)
+    prediction_map = make_predictions(features, labels)
 
     save(prediction_map, output_path, profile)
+
+
+def get_features(input_data, input_path, feature_type, features_path, profile):
+    if feature_type != FeatureType.IDENTITY:
+        features_path = get_features_path(input_path, features_path, feature_type)
+        if not features_path.exists():
+            features = extract_features(input_data, feature_type)
+            save(features, features_path, profile)
+        features, _ = read_geotiff(features_path)
+    return input_data
 
 
 def extract_features(input_data, feature_type):
