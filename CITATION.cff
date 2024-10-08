@@ -1,0 +1,19 @@
+# YAML 1.2
+---
+cff-version: "1.2.0"
+title: "segmentmytiff"
+authors:
+  - family-names: Meijer
+    given-names: Christiaan
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+date-released: 2024-10-08
+version: "0.1.0"
+repository-code: "https://github.com/DroneML/segmentmytiff"
+keywords:
+  - "Segmentation"
+  - " UNet"
+  - " Active learning"
+  - " Drone"
+  - " Raster data"
+  - " Spatial data"
+message: "If you use this software, please cite it using these metadata."
