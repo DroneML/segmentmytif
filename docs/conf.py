@@ -56,9 +56,6 @@ templates_path = ["_templates"]
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
-# If true, `todo` and `todoList` produce output, else they produce nothing.
-todo_include_todos = False
-
 # -- Use autoapi.extension to run sphinx-apidoc -------
 
 autoapi_dirs = ['../src/segmentmytiff']
