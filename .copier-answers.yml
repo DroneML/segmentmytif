@@ -1,0 +1,33 @@
+# Changes here will be overwritten by Copier
+SelectCitation:
+- AddCitationFile_flag
+- AddCFFConvert_flag
+SelectCodeQualityFeatures:
+- AddLocalTests_flag
+- SelectGitHubActions_flag
+- AddLinting_flag
+SelectCommunityFeatures: []
+SelectDocumentationFeatures:
+- AddOnlineDocumentation_flag
+- AddDevDoc_flag
+- AddGitHubActionDocumentation_flag
+SelectGitHubActions:
+- AddGitHubActionBuild_flag
+- AddLinkCheck_flag
+SelectPublishReleaseFeatures:
+- SelectCitation_flag
+- AddZenodo_flag
+_commit: 0.6.1
+_src_path: https://github.com/nlesc/python-template.git
+copyright_holder: Christiaan Meijer
+email: c.meijer@esciencecenter.nl
+full_name: Christiaan Meijer
+github_organization: DroneML
+keywords: Segmentation, UNet, Active learning, Drone, Raster data, Spatial data
+license: Apachev2
+package_name: segmentmytiff
+package_short_description: Segment (georeferenced) raster data in an interactive fashion.
+    Retrain models in seconds. Only small amounts of labeled data necessary because
+    of our use of pretrained base models as feature extractors.
+template_profile: ask
+version: 0.1.0
