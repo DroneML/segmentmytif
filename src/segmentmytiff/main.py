@@ -86,13 +86,6 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
     return prediction_map
 
 
-def generate_train_labels(data: np.ndarray) -> np.ndarray:
-    train_input = np.zeros((1, *data.shape[1:]), dtype=np.int32) - 1
-    train_input[0, 250:, 450:] = 1  # grass
-    train_input[0, 200:220, 0:100] = 0  # non-grass
-    return train_input
-
-
 def read_geotiff(input_path: Path) -> (np.ndarray, Any):
     with rasterio.open(input_path) as src:
         data = src.read()
@@ -128,8 +121,5 @@ if __name__ == '__main__':
     input_path = args.input
     labels_path = args.labels
     predictions_path = args.predictions
-
-    if False:  # Generate some dummy labels
-        save(generate_train_labels(data), labels_path)
 
     read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path)
