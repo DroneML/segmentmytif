@@ -1,6 +1,8 @@
 import argparse
 from pathlib import Path
 
+from tqdm import tqdm
+
 from segmentmytiff.main import read_geotiff, save_tiff
 
 
@@ -29,7 +31,7 @@ def monochromize_image(input_file_path: Path, output_folder_path: Path):
 
 def monochromize_folder(input_folder: Path, output_folder: Path):
     output_folder.mkdir(parents=True, exist_ok=True)
-    for input_file in input_folder.rglob('*.tif'):
+    for input_file in tqdm(list(input_folder.rglob('*.tif')), desc="Processing images"):
         relative_path = input_file.relative_to(input_folder)
         if input_file.is_file():
             path = output_folder / relative_path.parent
