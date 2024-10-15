@@ -5,10 +5,10 @@ import pytest
 from segmentmytiff.main import read_input_and_labels_and_save_predictions, FeatureType, get_features_path
 
 
-def test_integration():
+def test_integration(tmpdir):
     input_path = Path("test_data") / "test_image.tif"
     labels_path = Path("test_data") / "test_image_labels.tif"
-    predictions_path = Path("test_data") / "test_image_predictions.tif"
+    predictions_path = Path(tmpdir) / "test_image_predictions.tif"
 
     read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path)
 
