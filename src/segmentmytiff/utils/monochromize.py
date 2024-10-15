@@ -18,7 +18,7 @@ def parse_args():
     return args
 
 
-def monochromize(input_file_path: Path, output_folder_path: Path):
+def monochromize_image(input_file_path: Path, output_folder_path: Path):
     data, profile = read_geotiff(input_file_path)
     profile['count'] = 1  # Number of bands
     for i_channel in range(data.shape[0]):
@@ -30,8 +30,11 @@ def monochromize(input_file_path: Path, output_folder_path: Path):
 def monochromize_folder(input_folder: Path, output_folder: Path):
     output_folder.mkdir(parents=True, exist_ok=True)
     for input_file in input_folder.rglob('*.tif'):
+        relative_path = input_file.relative_to(input_folder)
         if input_file.is_file():
-            monochromize(input_file, output_folder)
+            path = output_folder / relative_path.parent
+            path.mkdir(parents=True, exist_ok=True)
+            monochromize_image(input_file, path)
 
 
 if __name__ == "__main__":
