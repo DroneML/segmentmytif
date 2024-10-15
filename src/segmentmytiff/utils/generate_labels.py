@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from segmentmytiff.main import save, read_geotiff
+from segmentmytiff.main import save_tiff, read_geotiff
 
 
 def generate_train_labels(data: np.ndarray) -> np.ndarray:
@@ -15,7 +15,7 @@ def main():
     input_image_path = Path("tests/test_data/test_image.tif")
     labels_path = Path("tests/test_data/test_image_labels.tif")
     data, profile = read_geotiff(input_image_path)
-    save(generate_train_labels(data), labels_path, profile)
+    save_tiff(generate_train_labels(data), labels_path, profile)
 
 
 if __name__ == '__main__':

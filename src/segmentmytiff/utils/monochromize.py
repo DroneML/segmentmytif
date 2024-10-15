@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from segmentmytiff.main import read_geotiff, save
+from segmentmytiff.main import read_geotiff, save_tiff
 
 
 def parse_args():
@@ -23,7 +23,7 @@ def monochromize(input_file_path: Path, output_folder_path: Path):
     for i_channel in range(data.shape[0]):
         output_file_name = f"{input_file_path.stem}_{i_channel}{input_file_path.suffix}"
         channel = data[i_channel:i_channel + 1]
-        save(channel, output_folder_path / output_file_name, profile)
+        save_tiff(channel, output_folder_path / output_file_name, profile)
 
 
 def monochromize_folder(input_folder: Path, output_folder: Path):

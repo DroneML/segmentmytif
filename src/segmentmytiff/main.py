@@ -30,7 +30,7 @@ def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Pa
     labels, _ = read_geotiff(labels_path)
     prediction_map = make_predictions(features, labels)
 
-    save(prediction_map, output_path, profile)
+    save_tiff(prediction_map, output_path, profile)
 
 
 def get_features(input_data, input_path, feature_type, features_path, profile):
@@ -38,7 +38,7 @@ def get_features(input_data, input_path, feature_type, features_path, profile):
         features_path = get_features_path(input_path, features_path, feature_type)
         if not features_path.exists():
             features = extract_features(input_data, feature_type)
-            save(features, features_path, profile)
+            save_tiff(features, features_path, profile)
         features, _ = read_geotiff(features_path)
     return input_data
 
@@ -93,7 +93,7 @@ def read_geotiff(input_path: Path) -> (np.ndarray, Any):
     return data, profile
 
 
-def save(data: np.ndarray, output_path: Path, profile) -> None:
+def save_tiff(data: np.ndarray, output_path: Path, profile) -> None:
     profile.update(count=data.shape[0])  # set number of channels
     profile.update(compress=None)
     with rasterio.open(output_path, 'w', **profile) as dst:
