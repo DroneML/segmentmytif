@@ -1,7 +1,7 @@
 import argparse
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -93,10 +93,10 @@ def read_geotiff(input_path: Path) -> (np.ndarray, Any):
     return data, profile
 
 
-def save_tiff(data: np.ndarray, output_path: Path, profile) -> None:
+def save_tiff(data: np.ndarray, output_path: Union[Path, str], profile) -> None:
     profile.update(count=data.shape[0])  # set number of channels
     profile.update(compress=None)
-    with rasterio.open(output_path, 'w', **profile) as dst:
+    with rasterio.open(str(output_path), 'w', **profile) as dst:
         dst.write(data)
 
 
