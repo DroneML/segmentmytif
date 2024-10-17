@@ -1,5 +1,6 @@
 """Large parts copied from https://medium.com/@fernandopalominocobo/mastering-u-net-a-step-by-step-guide-to-segmentation-from-scratch-with-pytorch-6a17c5916114"""
 import argparse
+import time
 from pathlib import Path
 
 import torch
@@ -9,6 +10,7 @@ from torch.utils.data import DataLoader, random_split
 from torch.utils.data.dataset import Dataset
 from torchvision import transforms
 from tqdm import tqdm
+import mlflow
 
 
 class DoubleConv(nn.Module):
@@ -24,6 +26,7 @@ class DoubleConv(nn.Module):
     def forward(self, x):
         return self.conv_op(x)
 
+
 class DownSample(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
@@ -36,16 +39,18 @@ class DownSample(nn.Module):
 
         return down, p
 
+
 class UpSample(nn.Module):
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.up = nn.ConvTranspose2d(in_channels, in_channels//2, kernel_size=2, stride=2)
+        self.up = nn.ConvTranspose2d(in_channels, in_channels // 2, kernel_size=2, stride=2)
         self.conv = DoubleConv(in_channels, out_channels)
 
     def forward(self, x1, x2):
         x1 = self.up(x1)
         x = torch.cat([x1, x2], 1)
         return self.conv(x)
+
 
 class UNet(nn.Module):
     def __init__(self, in_channels, num_classes):
@@ -80,20 +85,20 @@ class UNet(nn.Module):
         out = self.out(up_4)
         return out
 
+
 class MonochromeFlairDataset(Dataset):
     def __init__(self, root_path, limit=None, split="train"):
         self.root_path = root_path
         self.limit = limit
         self.images = sorted([str(p) for p in (Path(root_path) / split / "input").glob("*.tif")])[:self.limit]
 
-        def image_path_to_mask_path(image_path:Path) -> Path:
+        def image_path_to_mask_path(image_path: Path) -> Path:
             return image_path.parent.parent / "labels" / f"MSK{image_path.stem[3:-2]}_0{image_path.suffix}"  # -2 for "_b" where b is band#
 
         self.masks = [str(image_path_to_mask_path(Path(p))) for p in self.images][:self.limit]
         non_existing_masks = [p for p in self.masks if Path(p).exists() == False]
         if non_existing_masks:
             print(f"{len(non_existing_masks)} of a total of {len(self.masks)} masks not found.")
-
 
         self.transform = transforms.Compose([
             transforms.Resize((512, 512)),
@@ -103,7 +108,7 @@ class MonochromeFlairDataset(Dataset):
             self.limit = len(self.images)
 
     def __getitem__(self, index):
-        img = Image.open(self.images[index]).convert("RGB")
+        img = Image.open(self.images[index]).convert("L")
         mask = Image.open(self.masks[index]).convert("L")
 
         return self.transform(img), self.transform(mask)
@@ -131,45 +136,55 @@ def dice_coefficient(prediction, target, epsilon=1e-07):
 
     return dice
 
+
 def main(root_path):
-    train_val_dataset = MonochromeFlairDataset(root_path, limit=5)
-    test_dataset = MonochromeFlairDataset(root_path, split="test")
-    generator = torch.Generator().manual_seed(0)
-    train_dataset, validation_dataset = random_split(train_val_dataset, [0.8, 0.2], generator=generator)
+    mlflow.set_tracking_uri(uri="http://127.0.0.1:5000")
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    mlflow.set_experiment("MLflow Quickstart")
+    with mlflow.start_run():
+        mlflow.set_tag("Training Info", "Segmentation model for ortho photos.")
+        train_val_dataset = MonochromeFlairDataset(root_path, limit=5)
+        test_dataset = MonochromeFlairDataset(root_path, split="test")
+        generator = torch.Generator().manual_seed(0)
+        train_dataset, validation_dataset = random_split(train_val_dataset, [0.8, 0.2], generator=generator)
 
-    if device == "cuda":
-        num_workers = torch.cuda.device_count() * 4
-    else:
-        num_workers = 1
+        device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    LEARNING_RATE = 3e-4
-    BATCH_SIZE = 8
+        if device == "cuda":
+            num_workers = torch.cuda.device_count() * 4
+        else:
+            num_workers = 1
 
-    train_dataloader = DataLoader(dataset=train_dataset,
-                                  num_workers=num_workers, pin_memory=False,
-                                  batch_size=BATCH_SIZE,
-                                  shuffle=True)
-    validation_dataloader = DataLoader(dataset=validation_dataset,
-                                num_workers=num_workers, pin_memory=False,
-                                batch_size=BATCH_SIZE,
-                                shuffle=True)
+        LEARNING_RATE = 3e-4
+        BATCH_SIZE = 8
 
-    test_dataloader = DataLoader(dataset=test_dataset,
-                                 num_workers=num_workers, pin_memory=False,
-                                 batch_size=BATCH_SIZE,
-                                 shuffle=True)
+        mlflow.log_param("LEARNING_RATE", LEARNING_RATE)
+        mlflow.log_param("BATCH_SIZE", BATCH_SIZE)
+        mlflow.log_param("device", device)
+        mlflow.log_param("num_workers", num_workers)
 
-    model = UNet(in_channels=3, num_classes=1).to(device)
-    optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
-    criterion = nn.BCEWithLogitsLoss()
+        train_dataloader = DataLoader(dataset=train_dataset,
+                                      num_workers=num_workers, pin_memory=False,
+                                      batch_size=BATCH_SIZE,
+                                      shuffle=True)
+        validation_dataloader = DataLoader(dataset=validation_dataset,
+                                           num_workers=num_workers, pin_memory=False,
+                                           batch_size=BATCH_SIZE,
+                                           shuffle=True)
 
-    torch.cuda.empty_cache()
+        test_dataloader = DataLoader(dataset=test_dataset,
+                                     num_workers=num_workers, pin_memory=False,
+                                     batch_size=BATCH_SIZE,
+                                     shuffle=True)
 
+        model = UNet(in_channels=1, num_classes=1).to(device)
+        optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
+        criterion = nn.BCEWithLogitsLoss()
 
+        torch.cuda.empty_cache()
 
-    train(model, train_dataloader, validation_dataloader, criterion, optimizer, device)
+        train(model, train_dataloader, validation_dataloader, criterion, optimizer, device)
+    mlflow.end_run()
 
 
 def train(model, train_dataloader, validation_dataloader, criterion, optimizer, device):
@@ -228,12 +243,21 @@ def train(model, train_dataloader, validation_dataloader, criterion, optimizer, 
         val_dcs.append(val_dc)
 
         print("-" * 30)
-        print(f"Training Loss EPOCH {epoch + 1}: {train_loss:.4f}")
-        print(f"Training DICE EPOCH {epoch + 1}: {train_dc:.4f}")
+        print(f"Training Loss EPOCH {epoch}: {train_loss:.4f}")
+        print(f"Training DICE EPOCH {epoch}: {train_dc:.4f}")
         print("\n")
-        print(f"Validation Loss EPOCH {epoch + 1}: {val_loss:.4f}")
-        print(f"Validation DICE EPOCH {epoch + 1}: {val_dc:.4f}")
+        print(f"Validation Loss EPOCH {epoch}: {val_loss:.4f}")
+        print(f"Validation DICE EPOCH {epoch}: {val_dc:.4f}")
         print("-" * 30)
+
+        metrics = {
+            "train_loss": train_loss,
+            "train_dc": train_dc,
+            "val_loss": val_loss,
+            "val_dc": val_dc,
+        }
+
+        mlflow.log_metrics(metrics, step=epoch, timestamp=int(round(time.time())))
     # Saving the model
     torch.save(model.state_dict(), 'my_checkpoint.pth')
 
@@ -242,4 +266,3 @@ if __name__ == '__main__':
     args = parse_args()
     root_path = args.root
     main(root_path)
-
