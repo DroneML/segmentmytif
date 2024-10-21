@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from utils import TEST_DATA_FOLDER
 import numpy as np
 import pytest
 import rasterio
@@ -8,8 +9,8 @@ from segmentmytiff.main import read_input_and_labels_and_save_predictions, Featu
 
 
 def test_integration(tmpdir):
-    input_path = Path("test_data") / "test_image.tif"
-    labels_path = Path("test_data") / "test_image_labels.tif"
+    input_path = TEST_DATA_FOLDER / "test_image.tif"
+    labels_path = TEST_DATA_FOLDER / "test_image_labels.tif"
     predictions_path = Path(tmpdir) / "test_image_predictions.tif"
 
     read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path)
