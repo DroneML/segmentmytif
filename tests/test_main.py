@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from utils import TEST_DATA_FOLDER
+from .utils import TEST_DATA_FOLDER
 import numpy as np
 import pytest
 import rasterio
