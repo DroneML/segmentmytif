@@ -22,7 +22,13 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
-dependencies = []
+dependencies = [
+    "tqdm",
+    "numpy",
+    "pandas",
+    "rasterio",
+    "sklearn",
+]
 description = "Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors."
 keywords = ["Segmentation"," UNet"," Active learning"," Drone"," Raster data"," Spatial data"]
 license = {file = "LICENSE"}
@@ -32,6 +38,12 @@ requires-python = ">=3.8"
 version = "0.1.0"
 
 [project.optional-dependencies]
+train = [
+    "torch",
+    "PIL",
+    "torchvision",
+    "mlflow",
+]
 dev = [
     "build",  # build is not only used in publishing (below), but also in the template's test suite
     "bump-my-version",
