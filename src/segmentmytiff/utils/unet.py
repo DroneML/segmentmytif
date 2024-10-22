@@ -138,12 +138,12 @@ def dice_coefficient(prediction, target, epsilon=1e-07):
 
 
 def main(root_path):
-    mlflow.set_tracking_uri(uri="http://127.0.0.1:5000")
+    mlflow.set_tracking_uri(uri="http://127.0.0.1:80")
 
     mlflow.set_experiment("MLflow Quickstart")
     with mlflow.start_run():
         mlflow.set_tag("Training Info", "Segmentation model for ortho photos.")
-        train_val_dataset = MonochromeFlairDataset(root_path, limit=5)
+        train_val_dataset = MonochromeFlairDataset(root_path)
         test_dataset = MonochromeFlairDataset(root_path, split="test")
         generator = torch.Generator().manual_seed(0)
         train_dataset, validation_dataset = random_split(train_val_dataset, [0.8, 0.2], generator=generator)
