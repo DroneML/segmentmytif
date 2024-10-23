@@ -1,4 +1,4 @@
-[![Documentation Status](https://readthedocs.org/projects/segmentmytiff/badge/?version=latest)](https://segmentmytiff.readthedocs.io/en/latest/?badge=latest) [![build](https://github.com/DroneML/segmentmytiff/actions/workflows/build.yml/badge.svg)](https://github.com/DroneML/segmentmytiff/actions/workflows/build.yml) [![cffconvert](https://github.com/DroneML/segmentmytiff/actions/workflows/cffconvert.yml/badge.svg)](https://github.com/DroneML/segmentmytiff/actions/workflows/cffconvert.yml)
+[![Documentation Status](https://readthedocs.org/projects/segmentmytif/badge/?version=latest)](https://segmentmytif.readthedocs.io/en/latest/?badge=latest) [![build](https://github.com/DroneML/segmentmytif/actions/workflows/build.yml/badge.svg)](https://github.com/DroneML/segmentmytif/actions/workflows/build.yml) [![cffconvert](https://github.com/DroneML/segmentmytif/actions/workflows/cffconvert.yml/badge.svg)](https://github.com/DroneML/segmentmytif/actions/workflows/cffconvert.yml)
 
 ## How to use segmentmytiff
 
