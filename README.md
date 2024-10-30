@@ -16,6 +16,29 @@ cd segmentmytiff
 python -m pip install .
 ```
 
+## Train a feature extraction model
+
+To train a feature extraction model run the script "train_model.py" in this repo:
+```bash
+python ./src/segmentmytiff/utils/train_model.py -r ../monochrome_flair_1_toy_dataset_flat/ --train_set_limit 10
+```
+This assumes a 'flat', grayscale, version of the FLAIR1 dataset is present at the selected root location.
+```
+root
+- train
+    - input
+        - IMG_061946_0.tif
+        - IMG_061946_1.tif
+        - ...
+    - labels
+        - MSK_061946_0.tif
+        - ...    
+```
+Use the script 'monochromize.py' to create greyscale (single band) tifs for every multiband tif in a source folder:
+```bash
+python ./src/segmentmytiff/utils/monochromize.py -i ../flair_1_toy_dataset/ -o ../monochrome_flair_1_toy_dataset/
+```
+
 ## Credits
 
 This package was created with [Copier](https://github.com/copier-org/copier) and the [NLeSC/python-template](https://github.com/NLeSC/python-template).
