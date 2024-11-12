@@ -1,24 +1,13 @@
 import argparse
-from enum import Enum
 from pathlib import Path
-from typing import Any, Union
 
 import numpy as np
 import pandas as pd
-import rasterio
 from numpy import ndarray
 from sklearn.ensemble import RandomForestClassifier
 
-
-class FeatureType(Enum):
-    IDENTITY = 1
-    FLAIR = 2
-
-
-def get_features_path(input_path : Path, features_type:FeatureType) -> Path:
-    if features_type == FeatureType.IDENTITY:
-        return input_path
-    return input_path.parent / f"{input_path.stem}_{features_type.name}{input_path.suffix}"
+from segmentmytiff.features import get_features, FeatureType
+from segmentmytiff.utils.io import read_geotiff, save_tiff
 
 
 def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Path, output_path: Path,
@@ -31,33 +20,6 @@ def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Pa
     prediction_map = make_predictions(features, labels)
 
     save_tiff(prediction_map, output_path, profile)
-
-
-def get_features(input_data, input_path, feature_type, features_path, profile):
-    if feature_type != FeatureType.IDENTITY:
-        features_path = get_features_path(input_path, features_path, feature_type)
-        if not features_path.exists():
-            features = extract_features(input_data, feature_type)
-            save_tiff(features, features_path, profile)
-        features, _ = read_geotiff(features_path)
-    return input_data
-
-
-def extract_features(input_data, feature_type):
-    extractor = {
-        FeatureType.IDENTITY: extract_identity_features,
-        FeatureType.FLAIR: extract_flair_features,
-    }[feature_type]
-
-    return extractor(input_data)
-
-
-def extract_identity_features(input_data):
-    return input_data
-
-
-def extract_flair_features(input_data):
-    raise NotImplemented()
 
 
 def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
@@ -84,20 +46,6 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
     prediction_map = predictions.transpose().reshape((predictions.shape[1], *input_data.shape[1:]))
     print('prediction_map shape', prediction_map.shape)
     return prediction_map
-
-
-def read_geotiff(input_path: Path) -> (np.ndarray, Any):
-    with rasterio.open(input_path) as src:
-        data = src.read()
-        profile = src.profile
-    return data, profile
-
-
-def save_tiff(data: np.ndarray, output_path: Union[Path, str], profile) -> None:
-    profile.update(count=data.shape[0])  # set number of channels
-    profile.update(compress=None)
-    with rasterio.open(str(output_path), 'w', **profile) as dst:
-        dst.write(data)
 
 
 def parse_args():

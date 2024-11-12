@@ -5,7 +5,9 @@ import numpy as np
 import pytest
 import rasterio
 
-from segmentmytiff.main import read_input_and_labels_and_save_predictions, FeatureType, get_features_path, save_tiff
+from segmentmytiff.main import read_input_and_labels_and_save_predictions
+from segmentmytiff.features import FeatureType, get_features_path
+from segmentmytiff.utils.io import save_tiff
 
 
 def test_integration(tmpdir):
