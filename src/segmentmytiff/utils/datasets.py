@@ -3,6 +3,8 @@ from pathlib import Path
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
+import numpy as np
+import torch
 
 
 class MonochromeFlairDataset(Dataset):
@@ -19,18 +21,34 @@ class MonochromeFlairDataset(Dataset):
         if non_existing_masks:
             print(f"{len(non_existing_masks)} of a total of {len(self.masks)} masks not found.")
 
-        self.transform = transforms.Compose([
-            transforms.Resize((512, 512)),
-            transforms.ToTensor()])
-
         if self.limit is None:
             self.limit = len(self.images)
 
     def __getitem__(self, index):
-        img = Image.open(self.images[index]).convert("L")
-        mask = Image.open(self.masks[index]).convert("L")
-
-        return self.transform(img), self.transform(mask)
+        img = transforms.ToTensor()(Image.open(self.images[index]).convert("L"))
+        mask = load_and_one_hot_encode(self.masks[index])
+        return img, mask
 
     def __len__(self):
         return min(len(self.images), self.limit)
+
+
+def load_and_one_hot_encode(image_path, num_classes=19):
+    """
+    Loads an greyscale (labels) image from the specified path and performs one-hot encoding.
+
+    Args:
+        image_path (str): The file path to the image.
+        num_classes (int, optional): The number of classes for one-hot encoding. Default is 20.
+
+    Returns:
+        torch.Tensor: A one-hot encoded tensor with shape (num_classes, height, width).
+    """
+    image = Image.open(image_path).convert("L")  # Load as grayscale
+
+    image_array = np.array(image, dtype=np.int64)
+    image_tensor = torch.from_numpy(image_array)
+
+    one_hot = torch.nn.functional.one_hot(image_tensor, num_classes=num_classes)
+
+    return one_hot.permute(2, 0, 1).float()

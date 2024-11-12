@@ -19,7 +19,7 @@ from segmentmytiff.utils.models import UNet
 from segmentmytiff.utils.performance_metrics import dice_coefficient
 
 
-def main(root_path, use_mlflow=True, train_set_limit=None):
+def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None):
     if use_mlflow and not mlflow_installed:
         raise Exception("Please install mlflow first or specify to run without mlflow.")
 
@@ -65,19 +65,19 @@ def main(root_path, use_mlflow=True, train_set_limit=None):
                                  batch_size=BATCH_SIZE,
                                  shuffle=True)
 
-    model = UNet(in_channels=1, num_classes=1).to(device)
+    model = UNet(in_channels=1, num_classes=19).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     criterion = nn.BCEWithLogitsLoss()
 
     torch.cuda.empty_cache()
 
-    train(model, train_dataloader, validation_dataloader, criterion, optimizer, device)
+    train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs)
 
     if use_mlflow:
         mlflow.end_run()
 
 
-def train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs = 10):
+def train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs):
     for epoch in tqdm(range(epochs)):
         train_loss, train_dice = train_one_step(model, train_dataloader, optimizer, criterion, device)
         val_loss, val_dice = validate(model, validation_dataloader, criterion, device)
@@ -148,14 +148,15 @@ def train_one_step(model, train_dataloader, optimizer, criterion, device):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Process input and output TIFF files.")
+    parser = argparse.ArgumentParser(description="Train a semantic segmentation model given a dataset of TIF images.")
     parser.add_argument('-r', '--root', type=Path, required=True, help='Root to the dataset')
     parser.add_argument('--no_mlflow', action='store_true', help='Flag for enabling or disabling MLflow')
     parser.add_argument('--train_set_limit', type=int, default=None, help='Limit for the size of the train set (default: no limit)')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train (default: 10)')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
     root_path = args.root
-    main(root_path, use_mlflow=not args.no_mlflow, train_set_limit=args.train_set_limit)
+    main(root_path, use_mlflow=not args.no_mlflow, train_set_limit=args.train_set_limit, epochs=args.epochs)
