@@ -6,10 +6,12 @@ from pathlib import Path
 import torch
 from torch import optim, nn
 from torch.utils.data import DataLoader, random_split
+from torchinfo import summary
 from tqdm import tqdm
 
 try:
     import mlflow
+
     mlflow_installed = True
 except ImportError:
     mlflow_installed = False
@@ -19,7 +21,7 @@ from segmentmytiff.utils.models import UNet
 from segmentmytiff.utils.performance_metrics import dice_coefficient
 
 
-def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None):
+def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None, model_scale=1):
     if use_mlflow and not mlflow_installed:
         raise Exception("Please install mlflow first or specify to run without mlflow.")
 
@@ -45,12 +47,6 @@ def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None):
     LEARNING_RATE = 3e-4
     BATCH_SIZE = 8
 
-    if use_mlflow:
-        mlflow.log_param("LEARNING_RATE", LEARNING_RATE)
-        mlflow.log_param("BATCH_SIZE", BATCH_SIZE)
-        mlflow.log_param("device", device)
-        mlflow.log_param("num_workers", num_workers)
-
     train_dataloader = DataLoader(dataset=train_dataset,
                                   num_workers=num_workers, pin_memory=False,
                                   batch_size=BATCH_SIZE,
@@ -61,13 +57,22 @@ def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None):
                                        shuffle=True)
 
     _test_dataloader = DataLoader(dataset=test_dataset,
-                                 num_workers=num_workers, pin_memory=False,
-                                 batch_size=BATCH_SIZE,
-                                 shuffle=True)
+                                  num_workers=num_workers, pin_memory=False,
+                                  batch_size=BATCH_SIZE,
+                                  shuffle=True)
 
-    model = UNet(in_channels=1, num_classes=19).to(device)
+    num_classes = 19
+    model = UNet(in_channels=1, num_classes=num_classes, model_scale=model_scale).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     criterion = nn.BCEWithLogitsLoss()
+
+    if use_mlflow:
+        mlflow.log_param("LEARNING_RATE", LEARNING_RATE)
+        mlflow.log_param("BATCH_SIZE", BATCH_SIZE)
+        mlflow.log_param("device", device)
+        mlflow.log_param("num_workers", num_workers)
+        mlflow.log_param("model_scale", model_scale)
+        mlflow.log_text(str(summary(model, input_size=(1, 1, 64, 64), verbose=0)), "model_summary.txt")
 
     torch.cuda.empty_cache()
 
@@ -151,12 +156,16 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train a semantic segmentation model given a dataset of TIF images.")
     parser.add_argument('-r', '--root', type=Path, required=True, help='Root to the dataset')
     parser.add_argument('--no_mlflow', action='store_true', help='Flag for enabling or disabling MLflow')
-    parser.add_argument('--train_set_limit', type=int, default=None, help='Limit for the size of the train set (default: no limit)')
+    parser.add_argument('--train_set_limit', type=int, default=None,
+                        help='Limit for the size of the train set (default: no limit)')
     parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train (default: 10)')
+    parser.add_argument('--model_scale', type=float, default=1,
+                        help='Scale number of feature maps in the model (default:1)')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
     root_path = args.root
-    main(root_path, use_mlflow=not args.no_mlflow, train_set_limit=args.train_set_limit, epochs=args.epochs)
+    main(root_path, use_mlflow=not args.no_mlflow, train_set_limit=args.train_set_limit, epochs=args.epochs,
+         model_scale=args.model_scale)

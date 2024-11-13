@@ -43,3 +43,17 @@ class TestUNet:
         sum = summary(model, input_data=input_tensor).__repr__()
 
         assert sum == expected_sum
+
+    def test_summary_model_scaled_down(self):
+        """Summary of model is exactly as tested."""
+        model_scale = 0.5
+        in_channels = 3
+        num_classes = 19
+        width = height = 64
+        input_tensor = torch.randn(1, in_channels, width, height)  # Minimum size for U-Net to work
+        expected_sum = (TEST_DATA_FOLDER / 'test_model_summary_half.json').read_text(encoding='utf-8')
+
+        model = UNet(in_channels, num_classes, model_scale=model_scale)
+        sum = summary(model, input_data=input_tensor).__repr__()
+
+        assert sum == expected_sum
