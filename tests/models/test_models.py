@@ -5,7 +5,7 @@ import torch
 from torchinfo import summary
 
 from segmentmytiff.utils.models import UNet
-from utils import TEST_DATA_FOLDER
+from ..utils import TEST_DATA_FOLDER
 
 
 class TestUNet:
