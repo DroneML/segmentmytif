@@ -5,6 +5,7 @@ import torch
 from torchinfo import summary
 
 from segmentmytiff.utils.models import UNet
+from utils import TEST_DATA_FOLDER
 
 
 class TestUNet:
@@ -36,7 +37,7 @@ class TestUNet:
         num_classes = 19
         width = height = 64
         input_tensor = torch.randn(1, in_channels, width, height)  # Minimum size for U-Net to work
-        expected_sum = Path('test_data/test_model_summary.json').read_text(encoding='utf-8')
+        expected_sum = (TEST_DATA_FOLDER / 'test_model_summary.json').read_text(encoding='utf-8')
 
         model = UNet(in_channels, num_classes)
         sum = summary(model, input_data=input_tensor).__repr__()
