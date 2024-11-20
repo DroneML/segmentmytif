@@ -21,16 +21,19 @@ from segmentmytiff.utils.models import UNet
 from segmentmytiff.utils.performance_metrics import dice_coefficient
 
 
-def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None, model_scale=1):
+def main(root_path, use_mlflow=True, train_set_limit=None, epochs=10, model_scale=1):
+    run_name = f"flair_toy_ep{epochs}_scale{str(model_scale).replace('.','_')}{'_tslim_'+str(train_set_limit) if train_set_limit is not None else ''}"
+
     if use_mlflow and not mlflow_installed:
         raise Exception("Please install mlflow first or specify to run without mlflow.")
 
     if use_mlflow:
-        mlflow.set_tracking_uri(uri="http://127.0.0.1:80")
-        mlflow.set_experiment("MLflow Quickstart")
+        mlflow.set_tracking_uri(uri="http://127.0.0.1:5000")
+        mlflow.set_experiment("Flair feature extractor")
+
 
     if use_mlflow:
-        mlflow.start_run()
+        mlflow.start_run(run_name=run_name)
         mlflow.set_tag("Training Info", "Segmentation model for ortho photos.")
     train_val_dataset = MonochromeFlairDataset(root_path, limit=train_set_limit)
     test_dataset = MonochromeFlairDataset(root_path, split="test")
@@ -76,13 +79,13 @@ def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None, model_sc
 
     torch.cuda.empty_cache()
 
-    train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs)
+    train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs, run_name=run_name)
 
     if use_mlflow:
         mlflow.end_run()
 
 
-def train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs):
+def train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs, run_name):
     for epoch in tqdm(range(epochs)):
         train_loss, train_dice = train_one_step(model, train_dataloader, optimizer, criterion, device)
         val_loss, val_dice = validate(model, validation_dataloader, criterion, device)
@@ -104,7 +107,7 @@ def train(model, train_dataloader, validation_dataloader, criterion, optimizer, 
 
         mlflow.log_metrics(metrics, step=epoch, timestamp=int(round(time.time())))
     # Saving the model
-    torch.save(model.state_dict(), 'my_checkpoint.pth')
+    torch.save(model.state_dict(), f'{run_name}.pth')
 
 
 def validate(model, validation_dataloader, criterion, device):
