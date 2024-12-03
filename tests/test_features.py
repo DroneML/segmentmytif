@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
-from segmentmytiff.features import extract_features, FeatureType
+from segmentmytiff.features import extract_features, FeatureType, NUM_FLAIR_CLASSES
+
 
 class TestExtractFeatures:
     def test_extract_identity_features(self):
