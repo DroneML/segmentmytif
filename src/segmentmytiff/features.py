@@ -8,6 +8,8 @@ from segmentmytiff.utils.io import save_tiff, read_geotiff
 from segmentmytiff.utils.models import UNet
 from torchinfo import summary
 
+NUM_FLAIR_CLASSES = 19
+
 
 class FeatureType(Enum):
     IDENTITY = 1
@@ -49,8 +51,8 @@ def extract_identity_features(input_data):
 
 def extract_flair_features(input_data):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = UNet(in_channels=1, num_classes=1)
-    state = torch.load(r"C:\Users\ChristiaanMeijer\OneDrive - Netherlands eScience Center\Documents\droneml\segmentmytif\models\alltoy-10ep-unet.pth",
+    model = UNet(in_channels=1, num_classes=NUM_FLAIR_CLASSES, model_scale=0.125)
+    state = torch.load(r"..\models\flair_toy_ep10_scale0_125.pth",
                        map_location=device, weights_only=True)
     model.load_state_dict(state)
     model.eval()
