@@ -42,21 +42,22 @@ class UpSample(nn.Module):
 
 
 class UNet(nn.Module):
-    def __init__(self, in_channels, num_classes):
+    def __init__(self, in_channels, num_classes, model_scale=1):
         super().__init__()
-        self.down_convolution_1 = DownSample(in_channels, 64)
-        self.down_convolution_2 = DownSample(64, 128)
-        self.down_convolution_3 = DownSample(128, 256)
-        self.down_convolution_4 = DownSample(256, 512)
+        denominator = int(round(1 / model_scale))
+        self.down_convolution_1 = DownSample(in_channels, 64//denominator)
+        self.down_convolution_2 = DownSample(64//denominator, 128//denominator)
+        self.down_convolution_3 = DownSample(128//denominator, 256//denominator)
+        self.down_convolution_4 = DownSample(256//denominator, 512//denominator)
 
-        self.bottle_neck = DoubleConv(512, 1024)
+        self.bottle_neck = DoubleConv(512//denominator, 1024//denominator)
 
-        self.up_convolution_1 = UpSample(1024, 512)
-        self.up_convolution_2 = UpSample(512, 256)
-        self.up_convolution_3 = UpSample(256, 128)
-        self.up_convolution_4 = UpSample(128, 64)
+        self.up_convolution_1 = UpSample(1024//denominator, 512//denominator)
+        self.up_convolution_2 = UpSample(512//denominator, 256//denominator)
+        self.up_convolution_3 = UpSample(256//denominator, 128//denominator)
+        self.up_convolution_4 = UpSample(128//denominator, 64//denominator)
 
-        self.out = nn.Conv2d(in_channels=64, out_channels=num_classes, kernel_size=1)
+        self.out = nn.Conv2d(in_channels=64//denominator, out_channels=num_classes, kernel_size=1)
 
     def forward(self, x):
         down_1, p1 = self.down_convolution_1(x)
@@ -70,6 +71,7 @@ class UNet(nn.Module):
         up_2 = self.up_convolution_2(up_1, down_3)
         up_3 = self.up_convolution_3(up_2, down_2)
         up_4 = self.up_convolution_4(up_3, down_1)
+
 
         out = self.out(up_4)
         return out

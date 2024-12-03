@@ -6,10 +6,12 @@ from pathlib import Path
 import torch
 from torch import optim, nn
 from torch.utils.data import DataLoader, random_split
+from torchinfo import summary
 from tqdm import tqdm
 
 try:
     import mlflow
+
     mlflow_installed = True
 except ImportError:
     mlflow_installed = False
@@ -19,16 +21,19 @@ from segmentmytiff.utils.models import UNet
 from segmentmytiff.utils.performance_metrics import dice_coefficient
 
 
-def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None):
+def main(root_path, use_mlflow=True, train_set_limit=None, epochs=10, model_scale=1):
+    run_name = f"flair_toy_ep{epochs}_scale{str(model_scale).replace('.','_')}{'_tslim_'+str(train_set_limit) if train_set_limit is not None else ''}"
+
     if use_mlflow and not mlflow_installed:
         raise Exception("Please install mlflow first or specify to run without mlflow.")
 
     if use_mlflow:
-        mlflow.set_tracking_uri(uri="http://127.0.0.1:80")
-        mlflow.set_experiment("MLflow Quickstart")
+        mlflow.set_tracking_uri(uri="http://127.0.0.1:5000")
+        mlflow.set_experiment("Flair feature extractor")
+
 
     if use_mlflow:
-        mlflow.start_run()
+        mlflow.start_run(run_name=run_name)
         mlflow.set_tag("Training Info", "Segmentation model for ortho photos.")
     train_val_dataset = MonochromeFlairDataset(root_path, limit=train_set_limit)
     test_dataset = MonochromeFlairDataset(root_path, split="test")
@@ -45,12 +50,6 @@ def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None):
     LEARNING_RATE = 3e-4
     BATCH_SIZE = 8
 
-    if use_mlflow:
-        mlflow.log_param("LEARNING_RATE", LEARNING_RATE)
-        mlflow.log_param("BATCH_SIZE", BATCH_SIZE)
-        mlflow.log_param("device", device)
-        mlflow.log_param("num_workers", num_workers)
-
     train_dataloader = DataLoader(dataset=train_dataset,
                                   num_workers=num_workers, pin_memory=False,
                                   batch_size=BATCH_SIZE,
@@ -61,23 +60,32 @@ def main(root_path, use_mlflow=True, train_set_limit=None, epochs=None):
                                        shuffle=True)
 
     _test_dataloader = DataLoader(dataset=test_dataset,
-                                 num_workers=num_workers, pin_memory=False,
-                                 batch_size=BATCH_SIZE,
-                                 shuffle=True)
+                                  num_workers=num_workers, pin_memory=False,
+                                  batch_size=BATCH_SIZE,
+                                  shuffle=True)
 
-    model = UNet(in_channels=1, num_classes=19).to(device)
+    num_classes = 19
+    model = UNet(in_channels=1, num_classes=num_classes, model_scale=model_scale).to(device)
     optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     criterion = nn.BCEWithLogitsLoss()
 
+    if use_mlflow:
+        mlflow.log_param("LEARNING_RATE", LEARNING_RATE)
+        mlflow.log_param("BATCH_SIZE", BATCH_SIZE)
+        mlflow.log_param("device", device)
+        mlflow.log_param("num_workers", num_workers)
+        mlflow.log_param("model_scale", model_scale)
+        mlflow.log_text(str(summary(model, input_size=(1, 1, 64, 64), verbose=0)), "model_summary.txt")
+
     torch.cuda.empty_cache()
 
-    train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs)
+    train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs, run_name=run_name)
 
     if use_mlflow:
         mlflow.end_run()
 
 
-def train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs):
+def train(model, train_dataloader, validation_dataloader, criterion, optimizer, device, epochs, run_name):
     for epoch in tqdm(range(epochs)):
         train_loss, train_dice = train_one_step(model, train_dataloader, optimizer, criterion, device)
         val_loss, val_dice = validate(model, validation_dataloader, criterion, device)
@@ -99,7 +107,7 @@ def train(model, train_dataloader, validation_dataloader, criterion, optimizer, 
 
         mlflow.log_metrics(metrics, step=epoch, timestamp=int(round(time.time())))
     # Saving the model
-    torch.save(model.state_dict(), 'my_checkpoint.pth')
+    torch.save(model.state_dict(), f'{run_name}.pth')
 
 
 def validate(model, validation_dataloader, criterion, device):
@@ -151,12 +159,16 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train a semantic segmentation model given a dataset of TIF images.")
     parser.add_argument('-r', '--root', type=Path, required=True, help='Root to the dataset')
     parser.add_argument('--no_mlflow', action='store_true', help='Flag for enabling or disabling MLflow')
-    parser.add_argument('--train_set_limit', type=int, default=None, help='Limit for the size of the train set (default: no limit)')
+    parser.add_argument('--train_set_limit', type=int, default=None,
+                        help='Limit for the size of the train set (default: no limit)')
     parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train (default: 10)')
+    parser.add_argument('--model_scale', type=float, default=1,
+                        help='Scale number of feature maps in the model (default:1)')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
     root_path = args.root
-    main(root_path, use_mlflow=not args.no_mlflow, train_set_limit=args.train_set_limit, epochs=args.epochs)
+    main(root_path, use_mlflow=not args.no_mlflow, train_set_limit=args.train_set_limit, epochs=args.epochs,
+         model_scale=args.model_scale)

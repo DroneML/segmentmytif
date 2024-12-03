@@ -35,7 +35,7 @@ class MonochromeFlairDataset(Dataset):
 
 def load_and_one_hot_encode(image_path, num_classes=19):
     """
-    Loads an greyscale (labels) image from the specified path and performs one-hot encoding.
+    Loads a greyscale (labels) image from the specified path and performs one-hot encoding.
 
     Args:
         image_path (str): The file path to the image.
@@ -46,7 +46,7 @@ def load_and_one_hot_encode(image_path, num_classes=19):
     """
     image = Image.open(image_path).convert("L")  # Load as grayscale
 
-    image_array = np.array(image, dtype=np.int64)
+    image_array = np.array(image, dtype=np.int64) -1  # -1 to convert to zero-based
     image_tensor = torch.from_numpy(image_array)
 
     one_hot = torch.nn.functional.one_hot(image_tensor, num_classes=num_classes)
