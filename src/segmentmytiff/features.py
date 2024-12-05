@@ -6,6 +6,9 @@ import torch
 
 from segmentmytiff.utils.io import save_tiff, read_geotiff
 from segmentmytiff.utils.models import UNet
+from torchinfo import summary
+
+NUM_FLAIR_CLASSES = 19
 
 
 class FeatureType(Enum):
@@ -13,7 +16,7 @@ class FeatureType(Enum):
     FLAIR = 2
 
 
-def get_features(input_data: np.ndarray, input_path:Path, feature_type: FeatureType, features_path:Path, profile):
+def get_features(input_data: np.ndarray, input_path: Path, feature_type: FeatureType, features_path: Path, profile):
     """
 
     :param input_data: 'Raw' input data as stored in TIFs by a GIS user. Shape: [n_bands, height, width]
@@ -47,10 +50,20 @@ def extract_identity_features(input_data):
 
 
 def extract_flair_features(input_data):
-    raise NotImplemented()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = UNet(in_channels=1, num_classes=NUM_FLAIR_CLASSES, model_scale=0.125)
+    state = torch.load(Path("models") / "flair_toy_ep10_scale0_125.pth",
+                       map_location=device, weights_only=True)
+    model.load_state_dict(state)
+    model.eval()
+    input_data = torch.from_numpy(input_data[None, 1:2, :, :]).float().to(device)
+
+    summary(model, input_data=input_data)
+    output = model(input_data)
+    return output
 
 
-def get_features_path(input_path : Path, features_type:FeatureType) -> Path:
+def get_features_path(input_path: Path, features_type: FeatureType) -> Path:
     if features_type == FeatureType.IDENTITY:
         return input_path
     return input_path.parent / f"{input_path.stem}_{features_type.name}{input_path.suffix}"

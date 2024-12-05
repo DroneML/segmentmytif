@@ -37,10 +37,10 @@ class TestUNet:
         num_classes = 19
         width = height = 64
         input_tensor = torch.randn(1, in_channels, width, height)  # Minimum size for U-Net to work
-        expected_sum = (TEST_DATA_FOLDER / 'test_model_summary.json').read_text(encoding='utf-8')
+        expected_sum = load_summary('test_model_summary.json')
 
         model = UNet(in_channels, num_classes)
-        sum = summary(model, input_data=input_tensor).__repr__()
+        sum = get_summary(model, input_tensor)
 
         assert sum == expected_sum
 
@@ -51,9 +51,26 @@ class TestUNet:
         num_classes = 19
         width = height = 64
         input_tensor = torch.randn(1, in_channels, width, height)  # Minimum size for U-Net to work
-        expected_sum = (TEST_DATA_FOLDER / 'test_model_summary_half.json').read_text(encoding='utf-8')
+        expected_sum = load_summary('test_model_summary_half.json')
 
         model = UNet(in_channels, num_classes, model_scale=model_scale)
-        sum = summary(model, input_data=input_tensor).__repr__()
+        sum = get_summary(model, input_tensor)
 
         assert sum == expected_sum
+
+
+def load_summary(file_name):
+    expected_sum = (TEST_DATA_FOLDER / file_name).read_text(encoding='utf-8')
+    return normalize_model_summary(expected_sum)
+
+
+def get_summary(model, input_tensor):
+    return normalize_model_summary(summary(model, input_data=input_tensor, verbose=0).__repr__())
+
+
+def normalize_model_summary(text):
+    return (text
+            .replace("=", "")
+            .replace("(G)", "(Units.GIGABYTES)")
+            .replace("(M)", "(Units.MEGABYTES)")
+            )
