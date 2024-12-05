@@ -71,6 +71,6 @@ def get_summary(model, input_tensor):
 def normalize_model_summary(text):
     return (text
             .replace("=", "")
-            .replace("(G)", "Units.GIGABYTES")
-            .replace("(M)", "Units.MEGABYTES")
+            .replace("(G)", "(Units.GIGABYTES)")
+            .replace("(M)", "(Units.MEGABYTES)")
             )
