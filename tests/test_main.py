@@ -1,15 +1,13 @@
 from pathlib import Path
 
-from graphql.validation.rules.overlapping_fields_can_be_merged import reason_message
-
-from .utils import TEST_DATA_FOLDER
 import numpy as np
 import pytest
 import rasterio
 
-from segmentmytiff.main import read_input_and_labels_and_save_predictions
 from segmentmytiff.features import FeatureType, get_features_path
+from segmentmytiff.main import read_input_and_labels_and_save_predictions
 from segmentmytiff.utils.io import save_tiff
+from .utils import TEST_DATA_FOLDER
 
 
 @pytest.mark.parametrize("test_image, test_labels, feature_type",
