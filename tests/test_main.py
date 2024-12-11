@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from graphql.validation.rules.overlapping_fields_can_be_merged import reason_message
+
 from .utils import TEST_DATA_FOLDER
 import numpy as np
 import pytest
@@ -10,14 +12,22 @@ from segmentmytiff.features import FeatureType, get_features_path
 from segmentmytiff.utils.io import save_tiff
 
 
-def test_integration(tmpdir):
-    input_path = TEST_DATA_FOLDER / "test_image.tif"
-    labels_path = TEST_DATA_FOLDER / "test_image_labels.tif"
-    predictions_path = Path(tmpdir) / "test_image_predictions.tif"
+@pytest.mark.parametrize("test_image, test_labels, feature_type",
+                         [
+                             ("test_image.tif", "test_image_labels.tif", FeatureType.IDENTITY),
+                             pytest.param("test_image.tif", "test_image_labels.tif", FeatureType.FLAIR, marks=pytest.mark.xfail(reason="model can only handle 512x512")),
+                             ("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.IDENTITY),
+                             ("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.FLAIR),
+                         ])
+def test_integration(tmpdir, test_image, test_labels, feature_type):
+    input_path = TEST_DATA_FOLDER / test_image
+    labels_path = TEST_DATA_FOLDER / test_labels
+    predictions_path = Path(tmpdir) / f"{test_image}_predictions_{str(feature_type)}.tif"
 
-    read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path)
+    read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path, feature_type=feature_type)
 
     assert predictions_path.exists()
+
 
 @pytest.mark.parametrize("input_path, feature_type, expected_path", [
     ("input.tiff", FeatureType.FLAIR, "input_FLAIR.tiff"),
@@ -27,6 +37,7 @@ def test_integration(tmpdir):
 def test_get_features_path(input_path, feature_type, expected_path):
     features_path = get_features_path(Path(input_path), feature_type)
     assert features_path == Path(expected_path)
+
 
 def test_save(tmpdir):
     predictions_path = Path(tmpdir) / "test_image_predictions.tif"

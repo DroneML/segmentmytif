@@ -54,6 +54,9 @@ def parse_args():
     parser.add_argument('-i', '--input', type=Path, help='Path to the input TIFF file')
     parser.add_argument('-l', '--labels', type=Path, help='Path to the training labels TIFF file')
     parser.add_argument('-p', '--predictions', type=Path, help='Path to the predictions output TIFF file')
+    parser.add_argument('-f', '--feature_type', type=FeatureType.from_string, choices=list(FeatureType),
+                        default=FeatureType.IDENTITY,
+                        help='Type of feature being used. "Identity" means the raw input is directly used as features.')
 
     args = parser.parse_args()
 
@@ -69,5 +72,6 @@ if __name__ == '__main__':
     input_path = args.input
     labels_path = args.labels
     predictions_path = args.predictions
+    feature_type = args.feature_type
 
-    read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path)
+    read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path, feature_type=feature_type)
