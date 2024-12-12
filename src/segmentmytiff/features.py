@@ -67,7 +67,7 @@ def extract_flair_features(input_data: ndarray) -> ndarray:
 
     summary(model, input_data=input_data)
     output = model(input_data)
-    return output.detach().numpy()
+    return output.detach().numpy()[0,:,:,:]
 
 
 def get_features_path(input_path: Path, features_type: FeatureType) -> Path:
