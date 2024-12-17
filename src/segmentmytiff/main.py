@@ -1,4 +1,6 @@
 import argparse
+import logging
+import random
 from pathlib import Path
 
 import numpy as np
@@ -7,8 +9,10 @@ from numpy import ndarray
 from sklearn.ensemble import RandomForestClassifier
 
 from segmentmytiff.features import get_features, FeatureType
+from segmentmytiff.logging_config import setup_logger, log_duration
 from segmentmytiff.utils.io import read_geotiff, save_tiff
 
+logger = setup_logger(__name__)
 
 def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Path, output_path: Path,
                                                feature_type=FeatureType.IDENTITY, features_path:Path=None) -> None:
@@ -30,22 +34,44 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
         :param labels: labels with shape [1, width, height]
     :return: probabilities with shape [class_values, width, height]
     """
-    print(labels.shape)
+    with log_duration("Prepare train data", logger):
+        train_data, train_labels = prepare_training_data(input_data, labels)
+
+    classifier = RandomForestClassifier(n_estimators=100, random_state=0)
+
+    with log_duration("Train model", logger):
+        classifier.fit(train_data, train_labels)
+
+    with log_duration("Make predictions", logger):
+        predictions = classifier.predict_proba(input_data.reshape((input_data.shape[0], -1)).transpose())
+        logger.debug(f"predictions: {predictions.shape}, {pd.DataFrame(predictions).value_counts()}")
+        prediction_map = predictions.transpose().reshape((predictions.shape[1], *input_data.shape[1:]))
+        logger.debug(f"prediction_map shape: {prediction_map.shape}")
+
+    return prediction_map
+
+
+def prepare_training_data(input_data, labels):
+    logger.debug(f"Shape of the labels: {labels.shape}")
     class1_labels = labels[0]  # Only single class is supported
     flattened = class1_labels.flatten()
     positive_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 1].transpose()
     negative_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 0].transpose()
-    print('instances:', positive_instances.shape, negative_instances.shape)
-    train_data = np.concatenate((positive_instances, negative_instances))
-    train_labels = np.concatenate(((flattened[flattened == 1]), (flattened[flattened == 0])))
-    print('train data', train_labels.shape, train_data.shape)
-    classifier = RandomForestClassifier(n_estimators=100, random_state=0)
-    classifier.fit(train_data, train_labels)
-    predictions = classifier.predict_proba(input_data.reshape((input_data.shape[0], -1)).transpose())
-    print('predictions', predictions.shape, pd.DataFrame(predictions).value_counts())
-    prediction_map = predictions.transpose().reshape((predictions.shape[1], *input_data.shape[1:]))
-    print('prediction_map shape', prediction_map.shape)
-    return prediction_map
+    n_positive = positive_instances.shape[0]
+    n_negative = negative_instances.shape[0]
+    n_labeled = n_negative + n_positive
+    n_unlabeled = np.prod(labels.shape[-2:]) - n_labeled
+    logger.info(
+        f"{n_labeled} ({round(n_labeled / (n_labeled + n_unlabeled), 2)}%) labeled instances  of a total of {n_labeled + n_unlabeled} instances.")
+    logger.info(
+        f"Training on {n_positive} ({round(100 * n_positive / n_labeled, 2)}%) positive labels and {n_negative} ({round(100 * n_negative / n_labeled, 2)}%) negative labels ")
+    order = np.arange(n_labeled)
+    np.random.shuffle(order)
+    train_data = np.concatenate((positive_instances, negative_instances))[order]
+    train_labels = np.concatenate(((flattened[flattened == 1]), (flattened[flattened == 0])))[order]
+    logger.debug(f"Train data shape: {train_labels.shape}")
+    logger.debug(f"Train labels shape: {train_data.shape}")
+    return train_data, train_labels
 
 
 def parse_args():
@@ -57,6 +83,7 @@ def parse_args():
     parser.add_argument('-f', '--feature_type', type=FeatureType.from_string, choices=list(FeatureType),
                         default=FeatureType.IDENTITY,
                         help='Type of feature being used. "Identity" means the raw input is directly used as features.')
+
 
     args = parser.parse_args()
 
@@ -75,3 +102,4 @@ if __name__ == '__main__':
     feature_type = args.feature_type
 
     read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path, feature_type=feature_type)
+
