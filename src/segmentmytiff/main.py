@@ -12,8 +12,13 @@ from segmentmytiff.utils.io import read_geotiff, save_tiff
 
 logger = setup_logger(__name__)
 
+
 def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Path, output_path: Path,
-                                               feature_type=FeatureType.IDENTITY, features_path:Path=None) -> None:
+                                               feature_type=FeatureType.IDENTITY, features_path: Path = None) -> None:
+    logger.info("read_input_and_labels_and_save_predictions called with the following arguments:")
+    for k, v in locals().items():
+        logger.info(f"{k}: {v}")
+
     input_data, profile = read_geotiff(input_path)
 
     features = get_features(input_data, input_path, feature_type, features_path, profile)
@@ -82,7 +87,6 @@ def parse_args():
                         default=FeatureType.IDENTITY,
                         help='Type of feature being used. "Identity" means the raw input is directly used as features.')
 
-
     args = parser.parse_args()
 
     # Validate arguments
@@ -100,4 +104,3 @@ if __name__ == '__main__':
     feature_type = args.feature_type
 
     read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path, feature_type=feature_type)
-
