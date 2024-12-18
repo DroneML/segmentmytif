@@ -60,4 +60,4 @@ def log_array(data: np.ndarray, logger, array_name:str="array") -> None:
     logger.debug(f"{indent}Max: {np.max(data)}")
     logger.debug(f"{indent}Average: {np.average(data)}")
     logger.debug(f"{indent}Std: {np.std(data)}")
-    logger.debug(f"{indent}Histogram: \n{pd.DataFrame(data.flatten()).value_counts()}")
+    logger.debug(f"{indent}Value counts: \n{pd.DataFrame(data.flatten()).value_counts()}")

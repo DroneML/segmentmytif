@@ -54,7 +54,6 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
 
 
 def prepare_training_data(input_data, labels):
-    logger.debug(f"Shape of the labels: {labels.shape}")
     class1_labels = labels[0]  # Only single class is supported
     flattened = class1_labels.flatten()
     positive_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 1].transpose()
@@ -71,8 +70,8 @@ def prepare_training_data(input_data, labels):
     np.random.shuffle(order)
     train_data = np.concatenate((positive_instances, negative_instances))[order]
     train_labels = np.concatenate(((flattened[flattened == 1]), (flattened[flattened == 0])))[order]
-    logger.debug(f"Train data shape: {train_labels.shape}")
-    logger.debug(f"Train labels shape: {train_data.shape}")
+    log_array(train_labels, logger, array_name="Train labels")
+    log_array(train_data, logger, array_name="Train data")
     return train_data, train_labels
 
 
