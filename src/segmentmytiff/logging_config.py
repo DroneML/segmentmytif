@@ -5,6 +5,9 @@ from contextlib import contextmanager
 from pathlib import Path
 from logging import handlers
 
+import numpy as np
+import pandas as pd
+
 
 def setup_logger(name: str = None, level=logging.INFO):
     """
@@ -47,3 +50,14 @@ def log_duration(task_name: str, logger: logging.Logger):
     yield
     duration = time.perf_counter() - start_time
     logger.info(f"{task_name} finished in {duration:.4f} seconds")
+
+
+def log_array(data: np.ndarray, logger, array_name:str="array") -> None:
+    logger.debug(f"{array_name}")
+    indent = 4*" "
+    logger.debug(f"{indent}Shape: {data.shape}")
+    logger.debug(f"{indent}Min: {np.min(data)}")
+    logger.debug(f"{indent}Max: {np.max(data)}")
+    logger.debug(f"{indent}Average: {np.average(data)}")
+    logger.debug(f"{indent}Std: {np.std(data)}")
+    logger.debug(f"{indent}Histogram: \n{pd.DataFrame(data.flatten()).value_counts()}")

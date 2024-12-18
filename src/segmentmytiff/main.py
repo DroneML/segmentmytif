@@ -7,7 +7,7 @@ from numpy import ndarray
 from sklearn.ensemble import RandomForestClassifier
 
 from segmentmytiff.features import get_features, FeatureType
-from segmentmytiff.logging_config import setup_logger, log_duration
+from segmentmytiff.logging_config import setup_logger, log_duration, log_array
 from segmentmytiff.utils.io import read_geotiff, save_tiff
 
 logger = setup_logger(__name__)
@@ -47,9 +47,8 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
 
     with log_duration("Make predictions", logger):
         predictions = classifier.predict_proba(input_data.reshape((input_data.shape[0], -1)).transpose())
-        logger.debug(f"predictions: {predictions.shape}, {pd.DataFrame(predictions).value_counts()}")
         prediction_map = predictions.transpose().reshape((predictions.shape[1], *input_data.shape[1:]))
-        logger.debug(f"prediction_map shape: {prediction_map.shape}")
+        log_array(prediction_map, logger, array_name="Predictions")
 
     return prediction_map
 
