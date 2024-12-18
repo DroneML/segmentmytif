@@ -16,6 +16,9 @@ cd segmentmytiff
 python -m pip install .
 ```
 
+## Logging
+The application writes logs to the 'logs' dir, which will be created if it doesn't exist yet. Messages printed to the screen (```stdout```) are stored in ```info.log``` for later reference. More detailed information, such as input data shapes and value distributions, are written to ```debug.log```.
+
 ## Train a feature extraction model
 
 To train a feature extraction model run the script "train_model.py" in this repo:
