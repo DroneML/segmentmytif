@@ -9,6 +9,8 @@ from torch.utils.data import DataLoader, random_split
 from torchinfo import summary
 from tqdm import tqdm
 
+from segmentmytiff.logging_config import setup_logger
+
 try:
     import mlflow
 
@@ -20,6 +22,8 @@ from segmentmytiff.utils.datasets import MonochromeFlairDataset
 from segmentmytiff.utils.models import UNet
 from segmentmytiff.utils.performance_metrics import dice_coefficient
 
+
+logger = setup_logger(__name__)
 
 def main(root_path, use_mlflow=True, train_set_limit=None, epochs=10, model_scale=1):
     run_name = f"flair_toy_ep{epochs}_scale{str(model_scale).replace('.','_')}{'_tslim_'+str(train_set_limit) if train_set_limit is not None else ''}"
@@ -90,13 +94,13 @@ def train(model, train_dataloader, validation_dataloader, criterion, optimizer, 
         train_loss, train_dice = train_one_step(model, train_dataloader, optimizer, criterion, device)
         val_loss, val_dice = validate(model, validation_dataloader, criterion, device)
 
-        print("-" * 30)
-        print(f"Training Loss EPOCH {epoch}: {train_loss:.4f}")
-        print(f"Training DICE EPOCH {epoch}: {train_dice:.4f}")
-        print("\n")
-        print(f"Validation Loss EPOCH {epoch}: {val_loss:.4f}")
-        print(f"Validation DICE EPOCH {epoch}: {val_dice:.4f}")
-        print("-" * 30)
+        logger.info("-" * 30)
+        logger.info(f"Training Loss EPOCH {epoch}: {train_loss:.4f}")
+        logger.info(f"Training DICE EPOCH {epoch}: {train_dice:.4f}")
+        logger.info("\n")
+        logger.info(f"Validation Loss EPOCH {epoch}: {val_loss:.4f}")
+        logger.info(f"Validation DICE EPOCH {epoch}: {val_dice:.4f}")
+        logger.info("-" * 30)
 
         metrics = {
             "train_loss": train_loss,

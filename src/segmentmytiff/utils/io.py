@@ -1,14 +1,20 @@
+import logging
 from pathlib import Path
 from typing import Any, Union
 
 import numpy as np
 import rasterio
 
+from segmentmytiff.logging_config import log_array
+
+logger = logging.getLogger(__name__)
+
 
 def read_geotiff(input_path: Path) -> (np.ndarray, Any):
     with rasterio.open(input_path) as src:
         data = src.read()
         profile = src.profile
+    log_array(data, logger, array_name=input_path)
     return data, profile
 
 

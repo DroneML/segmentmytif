@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from PIL import Image
@@ -19,7 +20,7 @@ class MonochromeFlairDataset(Dataset):
         self.masks = [str(image_path_to_mask_path(Path(p))) for p in self.images][:self.limit]
         non_existing_masks = [p for p in self.masks if Path(p).exists() == False]
         if non_existing_masks:
-            print(f"{len(non_existing_masks)} of a total of {len(self.masks)} masks not found.")
+            logging.getLogger().warning(f"{len(non_existing_masks)} of a total of {len(self.masks)} masks not found.")
 
         if self.limit is None:
             self.limit = len(self.images)
