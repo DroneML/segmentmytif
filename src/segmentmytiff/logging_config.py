@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 
 
-def setup_logger(name: str = None, level=logging.INFO):
+def setup_logger(name: str = None, stdout_level=logging.INFO):
     """
     Setup a logger with a specific name and logging level.
     """
@@ -27,7 +27,7 @@ def setup_logger(name: str = None, level=logging.INFO):
     info_fh.setLevel(logging.INFO)
     info_fh.setFormatter(formatter)
     stdout_sh = logging.StreamHandler(sys.stdout)
-    stdout_sh.setLevel(level)
+    stdout_sh.setLevel(stdout_level)
     stdout_sh.setFormatter(formatter)
 
     # Configure logger and add handlers
@@ -53,11 +53,4 @@ def log_duration(task_name: str, logger: logging.Logger):
 
 
 def log_array(data: np.ndarray, logger, array_name:str="array") -> None:
-    logger.debug(f"{array_name}")
-    indent = 4*" "
-    logger.debug(f"{indent}Shape: {data.shape}")
-    logger.debug(f"{indent}Min: {np.min(data)}")
-    logger.debug(f"{indent}Max: {np.max(data)}")
-    logger.debug(f"{indent}Average: {np.average(data)}")
-    logger.debug(f"{indent}Std: {np.std(data)}")
-    logger.debug(f"{indent}Value counts: \n{pd.DataFrame(data.flatten()).value_counts()}")
+    logger.debug(f"{array_name} shape: {data.shape}")
