@@ -1,16 +1,17 @@
+import logging
 from enum import Enum
 from pathlib import Path
 
 import numpy as np
 import torch
 from numpy import ndarray
-
+from segmentmytiff.logging_config import log_duration, log_array
 from segmentmytiff.utils.io import save_tiff, read_geotiff
 from segmentmytiff.utils.models import UNet
 from torchinfo import summary
 
 NUM_FLAIR_CLASSES = 19
-
+logger = logging.getLogger(__name__)
 
 class FeatureType(Enum):
     IDENTITY = 1
@@ -33,14 +34,21 @@ def get_features(input_data: np.ndarray, input_path: Path, feature_type: Feature
     :param profile:
     :return:
     """
-    if feature_type != FeatureType.IDENTITY:
+    if feature_type == FeatureType.IDENTITY:
+        return input_data
+    else:
         if features_path is None:
             features_path = get_features_path(input_path, feature_type)
         if not features_path.exists():
-            features = extract_features(input_data, feature_type)
+            logger.info(f"No existing {feature_type.name} found")
+            with log_duration(f"Extracting {feature_type.name} features", logger):
+                features = extract_features(input_data, feature_type)
+            log_array(features,logger,array_name=f"{feature_type.name} features")
+            logger.info(f"Saving {feature_type.name} features (shape {features.shape}) to {features_path}")
             save_tiff(features, features_path, profile)
-        features, _ = read_geotiff(features_path)
-    return input_data
+        loaded_features, _ = read_geotiff(features_path)
+        logger.info(f"Loading {feature_type.name} features (shape {loaded_features.shape}) to {features_path}")
+        return loaded_features
 
 
 def extract_features(input_data, feature_type):
@@ -65,7 +73,6 @@ def extract_flair_features(input_data: ndarray) -> ndarray:
     model.eval()
     input_data = torch.from_numpy(input_data[None, 1:2, :, :]).float().to(device)
 
-    summary(model, input_data=input_data)
     output = model(input_data)
     return output.detach().numpy()[0,:,:,:]
 
