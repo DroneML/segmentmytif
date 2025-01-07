@@ -47,34 +47,59 @@ def get_features(input_data: np.ndarray, input_path: Path, feature_type: Feature
             logger.info(f"Saving {feature_type.name} features (shape {features.shape}) to {features_path}")
             save_tiff(features, features_path, profile)
         loaded_features, _ = read_geotiff(features_path)
-        logger.info(f"Loading {feature_type.name} features (shape {loaded_features.shape}) to {features_path}")
+        logger.info(f"Loading {feature_type.name} features (shape {loaded_features.shape}) from {features_path}")
         return loaded_features
 
 
-def extract_features(input_data, feature_type):
+def extract_features(input_data, feature_type, **extractor_kwargs):
+    logger.debug(f"Options for feature extractor {feature_type.name}: {extractor_kwargs}")
     extractor = {
         FeatureType.IDENTITY: extract_identity_features,
         FeatureType.FLAIR: extract_flair_features,
     }[feature_type]
 
-    return extractor(input_data)
+    return extractor(input_data, **extractor_kwargs)
 
 
 def extract_identity_features(input_data: ndarray) -> ndarray:
     return input_data
 
 
-def extract_flair_features(input_data: ndarray) -> ndarray:
+def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = UNet(in_channels=1, num_classes=NUM_FLAIR_CLASSES, model_scale=0.125)
-    state = torch.load(Path("models") / "flair_toy_ep10_scale0_125.pth",
-                       map_location=device, weights_only=True)
+    model = UNet(in_channels=1, num_classes=NUM_FLAIR_CLASSES, model_scale=model_scale)
+    file_name = get_flair_model_file_name(model_scale)
+    state = torch.load(Path("models") / file_name,                       map_location=device, weights_only=True)
     model.load_state_dict(state)
     model.eval()
-    input_data = torch.from_numpy(input_data[None, 1:2, :, :]).float().to(device)
+    n_bands = input_data.shape[0]
 
-    output = model(input_data)
-    return output.detach().numpy()[0,:,:,:]
+    outputs = []
+    for i_band in range(n_bands):
+        current_input_data = torch.from_numpy(input_data[None, i_band:i_band+1, :, :]).float().to(device)
+        outputs.append(model(current_input_data).detach().numpy())
+    output = np.concatenate(outputs, axis=1)
+    return output[0,:,:,:]
+
+
+def get_flair_model_file_name(model_scale:float)->str:
+    scale_mapping = {
+        1.0: "1_0",
+        0.5: "0_5",
+        0.25: "0_25",
+        0.125: "0_125"
+    }
+
+    scale = None
+    for k, v in scale_mapping.items():
+        if np.isclose(model_scale, k, atol=0, rtol=0.1):
+            scale = v
+            break
+    if scale is None:
+        raise ValueError(f"Unsupported model scale selected ({model_scale}), choose from {scale_mapping.keys()}")
+
+    return f"flair_toy_ep10_scale{scale}.pth"
+
 
 
 def get_features_path(input_path: Path, features_type: FeatureType) -> Path:
