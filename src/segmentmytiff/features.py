@@ -13,6 +13,7 @@ from torchinfo import summary
 NUM_FLAIR_CLASSES = 19
 logger = logging.getLogger(__name__)
 
+
 class FeatureType(Enum):
     IDENTITY = 1
     FLAIR = 2
@@ -24,7 +25,9 @@ class FeatureType(Enum):
         except KeyError:
             raise ValueError()
 
-def get_features(input_data: np.ndarray, input_path: Path, feature_type: FeatureType, features_path: Path, profile):
+
+def get_features(input_data: np.ndarray, input_path: Path, feature_type: FeatureType, features_path: Path, profile,
+                 **extractor_kwargs):
     """
 
     :param input_data: 'Raw' input data as stored in TIFs by a GIS user. Shape: [n_bands, height, width]
@@ -32,6 +35,7 @@ def get_features(input_data: np.ndarray, input_path: Path, feature_type: Feature
     :param feature_type: See FeatureType enum for options.
     :param features_path: Path used for caching features
     :param profile:
+    :param extractor_kwargs: options for the feature extractor
     :return:
     """
     if feature_type == FeatureType.IDENTITY:
@@ -42,8 +46,8 @@ def get_features(input_data: np.ndarray, input_path: Path, feature_type: Feature
         if not features_path.exists():
             logger.info(f"No existing {feature_type.name} found")
             with log_duration(f"Extracting {feature_type.name} features", logger):
-                features = extract_features(input_data, feature_type)
-            log_array(features,logger,array_name=f"{feature_type.name} features")
+                features = extract_features(input_data, feature_type, **extractor_kwargs)
+            log_array(features, logger, array_name=f"{feature_type.name} features")
             logger.info(f"Saving {feature_type.name} features (shape {features.shape}) to {features_path}")
             save_tiff(features, features_path, profile)
         loaded_features, _ = read_geotiff(features_path)
@@ -52,7 +56,6 @@ def get_features(input_data: np.ndarray, input_path: Path, feature_type: Feature
 
 
 def extract_features(input_data, feature_type, **extractor_kwargs):
-    logger.debug(f"Options for feature extractor {feature_type.name}: {extractor_kwargs}")
     extractor = {
         FeatureType.IDENTITY: extract_identity_features,
         FeatureType.FLAIR: extract_flair_features,
@@ -66,23 +69,24 @@ def extract_identity_features(input_data: ndarray) -> ndarray:
 
 
 def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
+    logger.debug(f"Using UNet at scale {model_scale}")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = UNet(in_channels=1, num_classes=NUM_FLAIR_CLASSES, model_scale=model_scale)
     file_name = get_flair_model_file_name(model_scale)
-    state = torch.load(Path("models") / file_name,                       map_location=device, weights_only=True)
+    state = torch.load(Path("models") / file_name, map_location=device, weights_only=True)
     model.load_state_dict(state)
     model.eval()
     n_bands = input_data.shape[0]
 
     outputs = []
     for i_band in range(n_bands):
-        current_input_data = torch.from_numpy(input_data[None, i_band:i_band+1, :, :]).float().to(device)
+        current_input_data = torch.from_numpy(input_data[None, i_band:i_band + 1, :, :]).float().to(device)
         outputs.append(model(current_input_data).detach().numpy())
     output = np.concatenate(outputs, axis=1)
-    return output[0,:,:,:]
+    return output[0, :, :, :]
 
 
-def get_flair_model_file_name(model_scale:float)->str:
+def get_flair_model_file_name(model_scale: float) -> str:
     scale_mapping = {
         1.0: "1_0",
         0.5: "0_5",
@@ -99,7 +103,6 @@ def get_flair_model_file_name(model_scale:float)->str:
         raise ValueError(f"Unsupported model scale selected ({model_scale}), choose from {scale_mapping.keys()}")
 
     return f"flair_toy_ep10_scale{scale}.pth"
-
 
 
 def get_features_path(input_path: Path, features_type: FeatureType) -> Path:
