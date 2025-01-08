@@ -13,7 +13,8 @@ from .utils import TEST_DATA_FOLDER
 @pytest.mark.parametrize("test_image, test_labels, feature_type",
                          [
                              ("test_image.tif", "test_image_labels.tif", FeatureType.IDENTITY),
-                             pytest.param("test_image.tif", "test_image_labels.tif", FeatureType.FLAIR, marks=pytest.mark.xfail(reason="model can only handle 512x512")),
+                             pytest.param("test_image.tif", "test_image_labels.tif", FeatureType.FLAIR,
+                                          marks=pytest.mark.xfail(reason="model can only handle 512x512")),
                              ("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.IDENTITY),
                              ("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.FLAIR),
                          ])
@@ -22,7 +23,8 @@ def test_integration(tmpdir, test_image, test_labels, feature_type):
     labels_path = TEST_DATA_FOLDER / test_labels
     predictions_path = Path(tmpdir) / f"{test_image}_predictions_{str(feature_type)}.tif"
 
-    read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path, feature_type=feature_type)
+    read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path, feature_type=feature_type,
+                                               model_scale=0.125)  # scale down feature-extraction-model for testing
 
     assert predictions_path.exists()
 

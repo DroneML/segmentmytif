@@ -14,14 +14,15 @@ logger = setup_logger(__name__)
 
 
 def read_input_and_labels_and_save_predictions(input_path: Path, labels_path: Path, output_path: Path,
-                                               feature_type=FeatureType.IDENTITY, features_path: Path = None) -> None:
+                                               feature_type=FeatureType.IDENTITY, features_path: Path = None,
+                                               **extractor_kwargs) -> None:
     logger.info("read_input_and_labels_and_save_predictions called with the following arguments:")
     for k, v in locals().items():
         logger.info(f"{k}: {v}")
 
     input_data, profile = read_geotiff(input_path)
 
-    features = get_features(input_data, input_path, feature_type, features_path, profile)
+    features = get_features(input_data, input_path, feature_type, features_path, profile, **extractor_kwargs)
 
     labels, _ = read_geotiff(labels_path)
     prediction_map = make_predictions(features, labels)
