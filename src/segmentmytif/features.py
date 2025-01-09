@@ -5,9 +5,9 @@ from pathlib import Path
 import numpy as np
 import torch
 from numpy import ndarray
-from segmentmytiff.logging_config import log_duration, log_array
-from segmentmytiff.utils.io import save_tiff, read_geotiff
-from segmentmytiff.utils.models import UNet
+from segmentmytif.logging_config import log_duration, log_array
+from segmentmytif.utils.io import save_tiff, read_geotiff
+from segmentmytif.utils.models import UNet
 from torchinfo import summary
 
 NUM_FLAIR_CLASSES = 19

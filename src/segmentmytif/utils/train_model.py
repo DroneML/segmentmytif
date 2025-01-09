@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader, random_split
 from torchinfo import summary
 from tqdm import tqdm
 
-from segmentmytiff.logging_config import setup_logger
+from segmentmytif.logging_config import setup_logger
 
 try:
     import mlflow
@@ -18,9 +18,9 @@ try:
 except ImportError:
     mlflow_installed = False
 
-from segmentmytiff.utils.datasets import MonochromeFlairDataset
-from segmentmytiff.utils.models import UNet
-from segmentmytiff.utils.performance_metrics import dice_coefficient
+from segmentmytif.utils.datasets import MonochromeFlairDataset
+from segmentmytif.utils.models import UNet
+from segmentmytif.utils.performance_metrics import dice_coefficient
 
 
 logger = setup_logger(__name__)

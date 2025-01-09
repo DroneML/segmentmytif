@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 from torchinfo import summary
 
-from segmentmytiff.utils.models import UNet
+from segmentmytif.utils.models import UNet
 from tests.utils import TEST_DATA_FOLDER
 
 

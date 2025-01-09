@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=.
 set BUILDDIR=_build
-set SPHINXPROJ=segmentmytiff
+set SPHINXPROJ=segmentmytif
 
 if "%1" == "" goto help
 

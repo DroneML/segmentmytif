@@ -1,4 +1,4 @@
-"""Documentation about segmentmytiff."""
+"""Documentation about segmentmytif."""
 
 import logging
 

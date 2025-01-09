@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from segmentmytiff.utils.io import read_geotiff, save_tiff
+from segmentmytif.utils.io import read_geotiff, save_tiff
 
 
 def generate_train_labels(data: np.ndarray) -> np.ndarray:

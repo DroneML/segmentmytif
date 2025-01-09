@@ -5,7 +5,7 @@ from typing import Any, Union
 import numpy as np
 import rasterio
 
-from segmentmytiff.logging_config import log_array
+from segmentmytif.logging_config import log_array
 
 logger = logging.getLogger(__name__)
 

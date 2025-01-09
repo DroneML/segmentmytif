@@ -3,7 +3,7 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from segmentmytiff.utils.io import read_geotiff, save_tiff
+from segmentmytif.utils.io import read_geotiff, save_tiff
 
 
 def parse_args():

@@ -1,14 +1,14 @@
 # YAML 1.2
 ---
 cff-version: "1.2.0"
-title: "segmentmytiff"
+title: "segmentmytif"
 authors:
   - family-names: Meijer
     given-names: Christiaan
     orcid: "https://orcid.org/0000-0000-0000-0000"
 date-released: 2024-10-08
 version: "0.1.0"
-repository-code: "https://github.com/DroneML/segmentmytiff"
+repository-code: "https://github.com/DroneML/segmentmytif"
 keywords:
   - "Segmentation"
   - " UNet"

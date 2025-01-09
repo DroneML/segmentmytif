@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u"segmentmytiff"
+project = u"segmentmytif"
 copyright = u"2024-10-08 10:55:54, Christiaan Meijer"
 author = u"Christiaan Meijer"
 
@@ -58,7 +58,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Use autoapi.extension to run sphinx-apidoc -------
 
-autoapi_dirs = ['../src/segmentmytiff']
+autoapi_dirs = ['../src/segmentmytif']
 
 # -- Options for HTML output ----------------------------------------------
 

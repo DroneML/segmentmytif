@@ -1,7 +1,7 @@
 import shutil
 from pathlib import Path
 
-from segmentmytiff.utils.monochromize import monochromize_image, monochromize_folder
+from segmentmytif.utils.monochromize import monochromize_image, monochromize_folder
 from .utils import TEST_DATA_FOLDER
 
 
