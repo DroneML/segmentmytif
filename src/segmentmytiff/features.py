@@ -69,7 +69,7 @@ def extract_identity_features(input_data: ndarray) -> ndarray:
 
 
 def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
-    logger.debug(f"Using UNet at scale {model_scale}")
+    logger.info(f"Using UNet at scale {model_scale}")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = UNet(in_channels=1, num_classes=NUM_FLAIR_CLASSES, model_scale=model_scale)
     file_name = get_flair_model_file_name(model_scale)
