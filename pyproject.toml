@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
+    "dask",
     "tqdm",
     "numpy",
     "pandas",
