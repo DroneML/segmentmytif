@@ -7,9 +7,9 @@ import numpy as np
 import pytest
 import rasterio
 
-from segmentmytiff.features import FeatureType, get_features_path
-from segmentmytiff.main import read_input_and_labels_and_save_predictions, prepare_training_data
-from segmentmytiff.utils.io import save_tiff
+from segmentmytif.features import FeatureType, get_features_path
+from segmentmytif.main import read_input_and_labels_and_save_predictions, prepare_training_data
+from segmentmytif.utils.io import save_tiff
 from .utils import TEST_DATA_FOLDER
 
 

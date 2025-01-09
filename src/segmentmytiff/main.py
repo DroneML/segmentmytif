@@ -6,9 +6,9 @@ import dask.array as da
 from numpy import ndarray
 from sklearn.ensemble import RandomForestClassifier
 
-from segmentmytiff.features import get_features, FeatureType
-from segmentmytiff.logging_config import setup_logger, log_duration, log_array
-from segmentmytiff.utils.io import read_geotiff, save_tiff
+from segmentmytif.features import get_features, FeatureType
+from segmentmytif.logging_config import setup_logger, log_duration, log_array
+from segmentmytif.utils.io import read_geotiff, save_tiff
 
 logger = setup_logger(__name__)
 

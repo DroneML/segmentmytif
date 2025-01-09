@@ -36,7 +36,7 @@ dependencies = [
 description = "Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors."
 keywords = ["Segmentation"," UNet"," Active learning"," Drone"," Raster data"," Spatial data"]
 license = {file = "LICENSE"}
-name = "segmentmytiff"
+name = "segmentmytif"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.8"
 version = "0.1.0"
@@ -74,9 +74,9 @@ publishing = [
 ]
 
 [project.urls]
-Repository = "https://github.com/DroneML/segmentmytiff"
-Issues = "https://github.com/DroneML/segmentmytiff/issues"
-ReadTheDocs = "https://segmentmytiff.readthedocs.io"
+Repository = "https://github.com/DroneML/segmentmytif"
+Issues = "https://github.com/DroneML/segmentmytif/issues"
+ReadTheDocs = "https://segmentmytif.readthedocs.io"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -84,7 +84,7 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 branch = true
-source = ["src/segmentmytiff"]
+source = ["src/segmentmytif"]
 command_line = "-m pytest"
 
 [tool.tox]
@@ -134,7 +134,7 @@ pydocstyle.convention = "google"
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["segmentmytiff"]
+known-first-party = ["segmentmytif"]
 force-single-line = true
 no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
 
@@ -142,7 +142,7 @@ no-lines-before = ["future","standard-library","third-party","first-party","loca
 current_version = "0.1.0"
 
 [[tool.bumpversion.files]]
-filename = "src/segmentmytiff/__init__.py"
+filename = "src/segmentmytif/__init__.py"
 
 [[tool.bumpversion.files]]
 filename = "pyproject.toml"

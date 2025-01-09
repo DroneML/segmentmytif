@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from segmentmytiff.features import extract_features, FeatureType, NUM_FLAIR_CLASSES, get_flair_model_file_name
+from segmentmytif.features import extract_features, FeatureType, NUM_FLAIR_CLASSES, get_flair_model_file_name
 
 
 class TestExtractFeatures:
