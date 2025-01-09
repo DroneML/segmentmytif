@@ -2,7 +2,7 @@ import argparse
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
+import dask.array as da
 from numpy import ndarray
 from sklearn.ensemble import RandomForestClassifier
 
@@ -55,25 +55,62 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
 
 
 def prepare_training_data(input_data, labels):
+    """
+        Prepares training data for a binary classification task.
+
+        Parameters:
+        - input_data: A 3D array-like object (e.g., NumPy or Dask array) where the first dimension represents
+          instances, and the last two dimensions represent spatial data.
+        - labels: A 3D array-like object (e.g., NumPy or Dask array) where the first dimension is the class index
+          (only single-class supported), and the last two dimensions represent spatial labels.
+
+        Process:
+        1. Flattens the label array for the first class to a 1D array.
+        2. Separates the positive and negative instances from the input data based on the labels.
+        3. Computes the number of labeled and unlabeled instances and logs the statistics.
+        4. Concatenates positive and negative instances into training data and corresponding labels.
+
+        Returns:
+        - train_data: A 2D array where each row is a training instance and each column is a feature.
+        - train_labels: A 1D array containing the labels corresponding to the rows in `train_data`.
+        """
+    # Reshape input data to [n_instances, n_features]
     class1_labels = labels[0]  # Only single class is supported
     flattened = class1_labels.flatten()
     positive_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 1].transpose()
     negative_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 0].transpose()
-    n_positive = positive_instances.shape[0]
-    n_negative = negative_instances.shape[0]
-    n_labeled = n_negative + n_positive
+    n_labeled = flattened.shape[0]
     n_unlabeled = np.prod(labels.shape[-2:]) - n_labeled
     logger.info(
-        f"{n_labeled} ({round(n_labeled / (n_labeled + n_unlabeled), 2)}%) labeled instances  of a total of {n_labeled + n_unlabeled} instances.")
+        f"Dataset contains {n_labeled} ({round(100 * n_labeled / (n_labeled + n_unlabeled), 2)}%) labeled instances of a total of {n_labeled + n_unlabeled} instances.")
+    # Subsample training data
+    sampled_positive_instances = subsample(positive_instances, 10000)
+    sampled_negative_instances = subsample(negative_instances, 10000)
+    n_sampled_positive = sampled_positive_instances.shape[0]
+    n_sampled_negative = sampled_negative_instances.shape[0]
+    n_sampled_labeled = n_sampled_negative + n_sampled_positive
     logger.info(
-        f"Training on {n_positive} ({round(100 * n_positive / n_labeled, 2)}%) positive labels and {n_negative} ({round(100 * n_negative / n_labeled, 2)}%) negative labels ")
-    order = np.arange(n_labeled)
+        f"Training on {n_sampled_positive} ({round(100 * n_sampled_positive / n_sampled_labeled, 2)}%) positive labels and {n_sampled_negative} ({round(100 * n_sampled_negative / n_sampled_labeled, 2)}%) negative labels ")
+    # Shuffle training data
+    total_sample_size = sampled_positive_instances.shape[0] + sampled_negative_instances.shape[0]
+    order = np.arange(total_sample_size)
     np.random.shuffle(order)
-    train_data = np.concatenate((positive_instances, negative_instances))[order]
-    train_labels = np.concatenate(((flattened[flattened == 1]), (flattened[flattened == 0])))[order]
+    train_data = np.concatenate((sampled_positive_instances, sampled_negative_instances))[order]
+    train_labels = np.concatenate(((np.ones(shape=[sampled_positive_instances.shape[0]])), (np.zeros(shape=[sampled_negative_instances.shape[0]]))))[
+        order]
     log_array(train_labels, logger, array_name="Train labels")
     log_array(train_data, logger, array_name="Train data")
+
     return train_data, train_labels
+
+
+def subsample(instances, sample_size):
+    if isinstance(instances, da.Array):
+        instances.compute_chunk_sizes()
+    n_instances = instances.shape[0]
+    indices = np.arange(n_instances)
+    sample_indices = np.random.choice(indices, size=min(sample_size, n_instances), replace=False)
+    return instances[sample_indices]
 
 
 def parse_args():

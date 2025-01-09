@@ -1,11 +1,14 @@
+import time
+from contextlib import contextmanager
 from pathlib import Path
 
+import dask.array as da
 import numpy as np
 import pytest
 import rasterio
 
 from segmentmytiff.features import FeatureType, get_features_path
-from segmentmytiff.main import read_input_and_labels_and_save_predictions
+from segmentmytiff.main import read_input_and_labels_and_save_predictions, prepare_training_data
 from segmentmytiff.utils.io import save_tiff
 from .utils import TEST_DATA_FOLDER
 
@@ -48,3 +51,17 @@ def test_save(tmpdir):
     save_tiff(data, predictions_path, profile=profile)
 
     assert predictions_path.exists()
+
+
+@pytest.mark.parametrize("array_type", ["numpy", "dask"])
+def test_prepare_training_data(array_type):
+    random = np.random.default_rng(0)
+    length = 200
+    random_data = random.integers(low=0, high=256, size=(5, length, length))
+    labels = random.choice([0, 1, 2], size=(1, length, length), replace=True)
+    if array_type == "numpy":
+        input_data = random_data
+    elif array_type == "dask":
+        input_data = da.from_array(random_data)
+
+    prepare_training_data(input_data, labels)
