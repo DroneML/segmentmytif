@@ -2,7 +2,6 @@ import argparse
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import dask.array as da
 from numpy import ndarray
 from sklearn.ensemble import RandomForestClassifier
@@ -72,99 +71,46 @@ def prepare_training_data(input_data, labels):
         4. Concatenates positive and negative instances into training data and corresponding labels.
 
         Returns:
-        - train_data: A 2D array where each row is a training instance.
+        - train_data: A 2D array where each row is a training instance and each column is a feature.
         - train_labels: A 1D array containing the labels corresponding to the rows in `train_data`.
         """
-    n_labeled, n_negative, n_positive, n_unlabeled, train_data, train_labels = prepare_numpy_style(input_data, labels)
-
-    logger.info(
-        f"{n_labeled} ({round(100 * n_labeled / (n_labeled + n_unlabeled), 2)}%) labeled instances  of a total of {n_labeled + n_unlabeled} instances.")
-    logger.info(
-        f"Training on {n_positive} ({round(100 * n_positive / n_labeled, 2)}%) positive labels and {n_negative} ({round(100 * n_negative / n_labeled, 2)}%) negative labels ")
-    log_array(train_labels, logger, array_name="Train labels")
-    log_array(train_data, logger, array_name="Train data")
-    return train_data, train_labels
-
-
-def prepare_numpy_style(input_data, labels):
+    # Reshape input data to [n_instances, n_features]
     class1_labels = labels[0]  # Only single class is supported
     flattened = class1_labels.flatten()
-    n_bands = input_data.shape[0]
-    input_data_reshaped = input_data.reshape((n_bands, -1)).transpose()
-    positive_instances = input_data_reshaped[flattened == 1, :]
-    negative_instances = input_data_reshaped[flattened == 0, :]
-    n_positive = positive_instances.shape[0]
-    n_negative = negative_instances.shape[0]
-    n_labeled = n_negative + n_positive
+    positive_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 1].transpose()
+    negative_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 0].transpose()
+    n_labeled = flattened.shape[0]
     n_unlabeled = np.prod(labels.shape[-2:]) - n_labeled
-    order = np.arange(n_labeled)
-    np.random.shuffle(order)
-    train_data = np.concatenate((positive_instances, negative_instances))[order]
-    train_labels = np.concatenate(((np.ones(shape=[n_positive])), (np.zeros(shape=[n_negative]))))[order]
-    return n_labeled, n_negative, n_positive, n_unlabeled, train_data, train_labels
-def prepare_numpy_style_with_subsampling(input_data, labels):
-    class1_labels = labels[0]  # Only single class is supported
-    flattened = class1_labels.flatten()
-    n_bands = input_data.shape[0]
-    input_data_reshaped = input_data.reshape((n_bands, -1)).transpose()
-    positive_instances = input_data_reshaped[flattened == 1, :]
-    negative_instances = input_data_reshaped[flattened == 0, :]
-    n_positive = positive_instances.shape[0]
-    n_negative = negative_instances.shape[0]
-    n_labeled = n_negative + n_positive
-    n_unlabeled = np.prod(labels.shape[-2:]) - n_labeled
-    sample_size = 2000
-    sampled_positive_instances = subsample(n_positive, positive_instances, sample_size)
-    sampled_negative_instances = subsample(n_negative, negative_instances, sample_size)
-
+    logger.info(
+        f"Dataset contains {n_labeled} ({round(100 * n_labeled / (n_labeled + n_unlabeled), 2)}%) labeled instances of a total of {n_labeled + n_unlabeled} instances.")
+    # Subsample training data
+    sampled_positive_instances = subsample(positive_instances, 10000)
+    sampled_negative_instances = subsample(negative_instances, 10000)
     n_sampled_positive = sampled_positive_instances.shape[0]
     n_sampled_negative = sampled_negative_instances.shape[0]
     n_sampled_labeled = n_sampled_negative + n_sampled_positive
-
-    order = np.arange(n_sampled_labeled)
+    logger.info(
+        f"Training on {n_sampled_positive} ({round(100 * n_sampled_positive / n_sampled_labeled, 2)}%) positive labels and {n_sampled_negative} ({round(100 * n_sampled_negative / n_sampled_labeled, 2)}%) negative labels ")
+    # Shuffle training data
+    total_sample_size = sampled_positive_instances.shape[0] + sampled_negative_instances.shape[0]
+    order = np.arange(total_sample_size)
     np.random.shuffle(order)
     train_data = np.concatenate((sampled_positive_instances, sampled_negative_instances))[order]
-    train_labels = np.concatenate(((np.ones(shape=[n_sampled_positive])), (np.zeros(shape=[n_sampled_negative]))))[order]
-    return n_sampled_labeled, n_sampled_negative, n_sampled_positive, n_unlabeled, train_data, train_labels
+    train_labels = np.concatenate(((np.ones(shape=[sampled_positive_instances.shape[0]])), (np.zeros(shape=[sampled_negative_instances.shape[0]]))))[
+        order]
+    log_array(train_labels, logger, array_name="Train labels")
+    log_array(train_data, logger, array_name="Train data")
+
+    return train_data, train_labels
 
 
-def subsample(n_instances, instances, sample_size):
+def subsample(instances, sample_size):
     if isinstance(instances, da.Array):
         instances.compute_chunk_sizes()
     n_instances = instances.shape[0]
     indices = np.arange(n_instances)
     sample_indices = np.random.choice(indices, size=min(sample_size, n_instances), replace=False)
     return instances[sample_indices]
-
-
-def prepare_dask_style(input_data, labels):
-    class1_labels = labels[0]  # Only single class is supported
-    flattened = class1_labels.flatten()
-    positive_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 1].transpose()
-    negative_instances = input_data.reshape((input_data.shape[0], -1))[:, flattened == 0].transpose()
-    n_positive = get_dimension_size(positive_instances, 0)
-    n_negative = get_dimension_size(positive_instances, 0)
-    n_labeled = n_negative + n_positive
-    n_unlabeled = np.prod(labels.shape[-2:]) - n_labeled
-    sample_size = 2000
-    sampled_positive_instances = subsample(n_positive, positive_instances, sample_size)
-    sampled_negative_instances = subsample(n_negative, negative_instances, sample_size)
-
-    n_sampled_positive = sampled_positive_instances.shape[0]
-    n_sampled_negative = sampled_negative_instances.shape[0]
-    n_sampled_labeled = n_sampled_negative + n_sampled_positive
-
-    order = np.arange(n_sampled_labeled)
-    np.random.shuffle(order)
-    train_data = np.concatenate((sampled_positive_instances, sampled_negative_instances))[order]
-    train_labels = np.concatenate(((np.ones(shape=[n_sampled_positive])), (np.zeros(shape=[n_sampled_negative]))))[order]
-    return n_sampled_labeled, n_sampled_negative, n_sampled_positive, n_unlabeled, train_data, train_labels
-
-
-def get_dimension_size(arr, axis:int) -> int:
-    if isinstance(arr, da.Array):
-        arr.compute_chunk_sizes()
-    return arr.shape[axis]
 
 
 def parse_args():

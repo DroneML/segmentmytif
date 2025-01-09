@@ -1,4 +1,3 @@
-import logging
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -9,9 +8,7 @@ import pytest
 import rasterio
 
 from segmentmytiff.features import FeatureType, get_features_path
-from segmentmytiff.logging_config import log_array
-from segmentmytiff.main import read_input_and_labels_and_save_predictions, prepare_numpy_style, prepare_dask_style, \
-    prepare_numpy_style_with_subsampling
+from segmentmytiff.main import read_input_and_labels_and_save_predictions, prepare_training_data
 from segmentmytiff.utils.io import save_tiff
 from .utils import TEST_DATA_FOLDER
 
@@ -56,45 +53,15 @@ def test_save(tmpdir):
     assert predictions_path.exists()
 
 
-def test_golden_data_preparation():
-    # prepare_training_data(input_data, labels)
+@pytest.mark.parametrize("array_type", ["numpy", "dask"])
+def test_prepare_training_data(array_type):
     random = np.random.default_rng(0)
-    length = 5000
-    input_data = random.integers(low=0, high=256, size=(5, length, length))
-    labels = random.choice([0,1,2], size=(1, length, length), replace=True)
-    with time_code("numpy"):
-        numpy_output = prepare_numpy_style(input_data, labels)
-    with time_code("npsub"):
-        _numpy_output = prepare_numpy_style_with_subsampling(input_data, labels)
-    with time_code("dask "):
-        dask_output = prepare_dask_style(input_data, labels)
-    with time_code("daskd"):
-        daskd_output = prepare_dask_style(da.from_array(input_data), da.from_array(labels))
+    length = 200
+    random_data = random.integers(low=0, high=256, size=(5, length, length))
+    labels = random.choice([0, 1, 2], size=(1, length, length), replace=True)
+    if array_type == "numpy":
+        input_data = random_data
+    elif array_type == "dask":
+        input_data = da.from_array(random_data)
 
-
-    print_results(numpy_output)
-    print_results(dask_output)
-    print_results(daskd_output)
-
-    for n in zip(numpy_output, dask_output):
-        assert n == n
-    for n in zip(dask_output, daskd_output):
-        assert n == n
-
-
-def print_results(numpy_output):
-    n_labeled, n_negative, n_positive, n_unlabeled, train_data, train_labels = numpy_output
-    print(
-        f"{n_labeled} ({round(100 * n_labeled / (n_labeled + n_unlabeled), 2)}%) labeled instances  of a total of {n_labeled + n_unlabeled} instances.")
-    print(
-        f"Training on {n_positive} ({round(100 * n_positive / n_labeled, 2)}%) positive labels and {n_negative} ({round(100 * n_negative / n_labeled, 2)}%) negative labels ")
-    print(f"train_data shape: {train_data.shape}")
-    print(f"train_labels shape: {train_labels.shape}")
-
-
-@contextmanager
-def time_code(task_name: str):
-    start_time = time.perf_counter()
-    yield
-    duration = time.perf_counter() - start_time
-    print(f"{task_name} finished in {duration:.4f} seconds")
+    prepare_training_data(input_data, labels)
