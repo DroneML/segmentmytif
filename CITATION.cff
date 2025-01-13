@@ -7,7 +7,7 @@ authors:
     given-names: Christiaan
     orcid: "https://orcid.org/0000-0000-0000-0000"
 date-released: 2024-10-08
-version: "0.1.0"
+version: "0.1.1"
 repository-code: "https://github.com/DroneML/segmentmytif"
 keywords:
   - "Segmentation"
