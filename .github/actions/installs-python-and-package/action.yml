@@ -1,0 +1,47 @@
+name: "Install Python and segmentmytif"
+description: "Installs Python, updates pip and installs segmentmytif together with its dependencies."
+inputs:
+  python-version:
+    required: false
+    description: "The Python version to use. Specify major and minor version, e.g. '3.10'."
+    default: "3.10"
+  extras-require:
+    required: false
+    description: "The extras dependencies packages to be installed, for instance 'docs' or 'publishing,notebooks'."
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - uses: actions/cache@v3
+      id: cache-python-env
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ env.pythonLocation }}-${{ hashFiles('setup.cfg') }}
+
+    - name: Python info
+      shell: bash {0}
+      run: |
+        which python3
+        python --version
+
+    - name: Upgrade pip
+      if: steps.cache-python-env.outputs.cache-hit != 'true'
+      shell: bash {0}
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+
+    - name: Install segmentmytif
+      shell: bash {0}
+      run: |
+        python -m pip install -e .[dev]
+
+    - name: Install segmentmytif extras
+      if: ${{ inputs.extras-require }}
+      shell: bash {0}
+      run: |
+        python -m pip install -e .[${{ inputs.extras-require }}]
