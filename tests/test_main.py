@@ -1,3 +1,4 @@
+import shutil
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -22,14 +23,22 @@ from .utils import TEST_DATA_FOLDER
                              ("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.FLAIR),
                          ])
 def test_integration(tmpdir, test_image, test_labels, feature_type):
-    input_path = TEST_DATA_FOLDER / test_image
-    labels_path = TEST_DATA_FOLDER / test_labels
+    input_path = copy_file_and_get_new_path(test_image, tmpdir)
+    labels_path = copy_file_and_get_new_path(test_labels, tmpdir)
     predictions_path = Path(tmpdir) / f"{test_image}_predictions_{str(feature_type)}.tif"
 
-    read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path, feature_type=feature_type,
+    read_input_and_labels_and_save_predictions(input_path, labels_path,
+                                               predictions_path,
+                                               feature_type=feature_type,
                                                model_scale=0.125)  # scale down feature-extraction-model for testing
 
     assert predictions_path.exists()
+
+
+def copy_file_and_get_new_path(test_image, tmpdir):
+    input_path = Path(tmpdir) / test_image
+    shutil.copy(TEST_DATA_FOLDER / test_image, input_path)
+    return input_path
 
 
 @pytest.mark.parametrize("input_path, feature_type, expected_path", [
