@@ -1,4 +1,4 @@
-[![workflow pypi badge](https://img.shields.io/pypi/v/segmentmytif.svg?colorB=blue)](https://pypi.python.org/project/segmentmytif/) [![Documentation Status](https://readthedocs.org/projects/segmentmytif/badge/?version=latest)](https://segmentmytif.readthedocs.io/en/latest/?badge=latest) [![build](https://github.com/DroneML/segmentmytif/actions/workflows/build.yml/badge.svg)](https://github.com/DroneML/segmentmytif/actions/workflows/build.yml) [![cffconvert](https://github.com/DroneML/segmentmytif/actions/workflows/cffconvert.yml/badge.svg)](https://github.com/DroneML/segmentmytif/actions/workflows/cffconvert.yml)
+[![workflow pypi badge](https://img.shields.io/pypi/v/segmentmytif.svg?colorB=blue)](https://pypi.python.org/project/segmentmytif/) [![Documentation Status](https://readthedocs.org/projects/segmentmytif/badge/?version=latest)](https://segmentmytif.readthedocs.io/en/latest/?badge=latest) [![build](https://github.com/DroneML/segmentmytif/actions/workflows/build.yml/badge.svg)](https://github.com/DroneML/segmentmytif/actions/workflows/build.yml)
 
 ## How to use segmentmytif
 
