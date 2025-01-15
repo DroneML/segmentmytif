@@ -1,6 +1,4 @@
 import shutil
-import time
-from contextlib import contextmanager
 from pathlib import Path
 
 import dask.array as da
@@ -17,8 +15,7 @@ from .utils import TEST_DATA_FOLDER
 @pytest.mark.parametrize("test_image, test_labels, feature_type",
                          [
                              ("test_image.tif", "test_image_labels.tif", FeatureType.IDENTITY),
-                             pytest.param("test_image.tif", "test_image_labels.tif", FeatureType.FLAIR,
-                                          marks=pytest.mark.xfail(reason="model can only handle 512x512")),
+                             ("test_image.tif", "test_image_labels.tif", FeatureType.FLAIR),
                              ("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.IDENTITY),
                              ("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.FLAIR),
                          ])
@@ -74,3 +71,4 @@ def test_prepare_training_data(array_type):
         input_data = da.from_array(random_data)
 
     prepare_training_data(input_data, labels)
+

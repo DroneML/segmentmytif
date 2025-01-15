@@ -4,14 +4,24 @@ from segmentmytif.features import extract_features, FeatureType, NUM_FLAIR_CLASS
 
 
 class TestExtractFeatures:
+
+
     def test_extract_identity_features(self):
         input_data = np.array(get_generated_multiband_image())
         result = extract_features(input_data, FeatureType.IDENTITY)
         assert np.array_equal(result, input_data)
-
-    def test_extract_flair_features(self):
-        n_bands = 3
-        input_data = np.array(get_generated_multiband_image(n_bands=n_bands))
+    @pytest.mark.parametrize(["n_bands", "width", "height"],
+                             [
+                                 (3, 1, 1),
+                                 (3, 8, 8),
+                                 (3, 16, 16),  # smallest size that can natively be processed by the model
+                                 (3, 61, 39),  # not divisible by 16 so requires padding in both directions
+                                 (3, 64, 48),  # smallest dimensions, > line above, that don't require padding
+                                 (1, 512, 512),  # size of the model's training data
+                                 (3, 1210, 718),  # not divisible by 16 so requires padding in both directions
+                             ])
+    def test_extract_flair_features(self, n_bands, width, height):
+        input_data = np.array(get_generated_multiband_image(n_bands=n_bands, width=width, height=height))
         result = extract_features(input_data, FeatureType.FLAIR, model_scale=0.125)
         assert np.array_equal(result.shape, [n_bands * NUM_FLAIR_CLASSES] + list(input_data.shape[1:]))
 
@@ -21,8 +31,8 @@ class TestExtractFeatures:
             extract_features(input_data, "UNSUPPORTED_TYPE")
 
 
-def get_generated_multiband_image(n_bands=3):
-    return np.random.random(size=[n_bands, 512, 512])
+def get_generated_multiband_image(n_bands=3, width=512, height=512):
+    return np.random.random(size=[n_bands, width, height])
 
 
 @pytest.mark.parametrize(["model_scale", "file_name"],

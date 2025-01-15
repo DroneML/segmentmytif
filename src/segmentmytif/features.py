@@ -8,7 +8,6 @@ from numpy import ndarray
 from segmentmytif.logging_config import log_duration, log_array
 from segmentmytif.utils.io import save_tiff, read_geotiff
 from segmentmytif.utils.models import UNet
-from torchinfo import summary
 
 NUM_FLAIR_CLASSES = 19
 logger = logging.getLogger(__name__)
@@ -80,8 +79,21 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
 
     outputs = []
     for i_band in range(n_bands):
-        current_input_data = torch.from_numpy(input_data[None, i_band:i_band + 1, :, :]).float().to(device)
-        outputs.append(model(current_input_data).detach().numpy())
+        input_band = torch.from_numpy(input_data[None, i_band:i_band + 1, :, :]).float().to(device)
+        width = input_band.shape[2]
+        height = input_band.shape[3]
+        if width % 16 == 0 and height % 16 == 0:
+            current_predictions = model(input_band).detach().numpy()
+        else:
+            logger.info(f"Input height ({height}) and width ({width}) are not divisible by 16. "
+                        f"Adding temporary padding while extracting features.")
+            pad_width = 16 - width % 16
+            pad_height = 16 - height % 16
+            padded_input_band = torch.nn.functional.pad(input_band, (0, pad_height, 0, pad_width))
+            padded_current_predictions = model(padded_input_band).detach().numpy()
+            current_predictions = padded_current_predictions[:, :, :width, :height]
+
+        outputs.append(current_predictions)
     output = np.concatenate(outputs, axis=1)
     return output[0, :, :, :]
 
