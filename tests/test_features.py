@@ -12,12 +12,12 @@ class TestExtractFeatures:
         assert np.array_equal(result, input_data)
     @pytest.mark.parametrize(["n_bands", "width", "height"],
                              [
-                                 (3, 1, 1),
-                                 (3, 8, 8),
+                                 (3, 1, 1),  # too small to be processed by the model, requires padding
+                                 (3, 8, 8),  # too small to be processed by the model, requires padding
                                  (3, 16, 16),  # smallest size that can natively be processed by the model
                                  (3, 61, 39),  # not divisible by 16 so requires padding in both directions
                                  (3, 64, 48),  # smallest dimensions, > line above, that don't require padding
-                                 (1, 512, 512),  # size of the model's training data
+                                 (1, 512, 512),  # size of the model's training data (easiest case)
                                  (3, 1210, 718),  # not divisible by 16 so requires padding in both directions
                              ])
     def test_extract_flair_features(self, n_bands, width, height):
