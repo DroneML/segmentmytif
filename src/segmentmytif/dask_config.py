@@ -2,7 +2,7 @@ from typing import Literal
 from dask.distributed import LocalCluster
 
 
-def get_dask_config(mode: Literal["normal", "safe", "parallel"] = "normal", **lckwargs):
+def get_dask_config(mode: Literal["normal", "safe", "parallel"] = "normal", **lckwargs: dict):
     """Get configuration strings for dask.
 
     This function translates the settings of dask.config to users.
@@ -10,13 +10,9 @@ def get_dask_config(mode: Literal["normal", "safe", "parallel"] = "normal", **lc
     "safe" will be the configuration "synchronous", which is for single-threaded.
     "parallel" will
 
-
-    Parameters
-    ----------
-    mode : Literal["normal", "safe", "parallel"], optional
-        Choice of dask configuration, by default "normal"
-    lckwargs : dict
-        Keyword arguments for LocalCluster
+    :param mode: Choice of dask configuration, by default "normal"
+    :param lckwargs: Keyword arguments for LocalCluster
+    :return: Configuration string for dask
     """
     match mode:
         case "normal":
