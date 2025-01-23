@@ -6,19 +6,19 @@ import numpy as np
 import xarray as xr
 
 
-def geom_to_label_array(
+def get_label_array(
     ras_template: xr.DataArray,
-    geom: gpd.GeoSeries,
-    value: Literal[0, 1],
+    geom_pos: gpd.GeoSeries,
+    geom_neg: gpd.GeoSeries,
     mode: Literal["normal", "parallel", "safe"] = "normal",
 ) -> xr.DataArray:
-    """Generate a label array for binary classification from a geometry.
+    """Generate a label array for binary classification from pos/neg geometries.
 
-    The function overlays a geometry on a template raster,
+    The function overlays pos/neg geometries on a template raster,
     then fills the overlapped area with the label value,
     leaving the rest of the raster with -1.
 
-    The label array should have three classes:
+    There are three values filled:
     - 1: positive label
     - 0: negative label
     - -1: unclassified
@@ -34,7 +34,6 @@ def geom_to_label_array(
 
     :param xr.DataArray ras_template: template raster with disired shape of the label array
     :param gpd.GeoSeries geom: Geometry of the label
-    :param Literal[0, 1] value: Label values
     :param Literal["normal", "parallel", "safe"] mode: Mode of execution, defaults to "normal"
     :return xr.DataArray: Generated label array
     """
@@ -43,6 +42,19 @@ def geom_to_label_array(
     if "band" in ras_template.dims:
         ras_template = ras_template.isel(band=0)
 
+    positive_labels = _geom_to_label_array(ras_template, geom_pos, 1, mode=mode)
+    negative_labels = _geom_to_label_array(ras_template, geom_neg, 0, mode=mode)
+
+    return -(positive_labels * negative_labels)  # Combine positive and negative labels
+
+
+def _geom_to_label_array(
+    ras_template: xr.DataArray,
+    geom: gpd.GeoSeries,
+    value: Literal[0, 1],
+    mode: Literal["normal", "parallel", "safe"] = "normal",
+) -> xr.DataArray:
+    """Generate a label array from a geometry."""
     # Make a template from the shape of the template raster
     # Fill it with the label value
     labels_template = xr.full_like(ras_template, fill_value=value, dtype=np.int32)
