@@ -2,6 +2,8 @@ import logging
 from enum import Enum
 from pathlib import Path
 
+from dask.array.core import Array
+import xarray as xr
 import numpy as np
 import torch
 from numpy import ndarray
@@ -25,30 +27,32 @@ class FeatureType(Enum):
             raise ValueError()
 
 
-def get_features(input_data: np.ndarray, input_path: Path, feature_type: FeatureType, features_path: Path, profile,
-                 **extractor_kwargs):
+def get_features(
+    raster: xr.DataArray, input_path: Path, feature_type: FeatureType, features_path: Path, **extractor_kwargs
+):
     """
     Extract features from the input data, or load them from disk if they have already been extracted.
     :param input_data: 'Raw' input data as stored in TIFs by a GIS user. Shape: [n_bands, height, width]
     :param input_path:
     :param feature_type: See FeatureType enum for options.
     :param features_path: Path used for caching features
-    :param profile:
     :param extractor_kwargs: options for the feature extractor
     :return:
     """
     if feature_type == FeatureType.IDENTITY:
-        return input_data
+        return raster
     else:
         if features_path is None:
             features_path = get_features_path(input_path, feature_type)
         if not features_path.exists():
-            logger.info(f"No existing {feature_type.name} features found at {features_path} for input data with shape {input_data.shape}")
+            logger.info(
+                f"No existing {feature_type.name} features found at {features_path} for input data with shape {raster.data.shape}"
+            )
             with log_duration(f"Extracting {feature_type.name} features", logger):
-                features = extract_features(input_data, feature_type, **extractor_kwargs)
-            log_array(features, logger, array_name=f"{feature_type.name} features")
-            logger.info(f"Saving {feature_type.name} features (shape {features.shape}) to {features_path}")
-            save_tiff(features, features_path, profile)
+                features_data = extract_features(raster.data, feature_type, **extractor_kwargs)
+            log_array(features_data, logger, array_name=f"{feature_type.name} features")
+            logger.info(f"Saving {feature_type.name} features (shape {features_data.shape}) to {features_path}")
+            features = xr.DataArray(features_data, dims=raster.dims).compute()
         loaded_features, _ = read_geotiff(features_path)
         logger.info(f"Loading {feature_type.name} features (shape {loaded_features.shape}) from {features_path}")
         return loaded_features
@@ -60,7 +64,10 @@ def extract_features(input_data, feature_type, **extractor_kwargs):
         FeatureType.FLAIR: extract_flair_features,
     }[feature_type]
 
-    return extractor(input_data, **extractor_kwargs)
+    if isinstance(input_data, Array):  # If dask array, map feature extraction function to each block
+        return input_data.map_blocks(extractor, **extractor_kwargs)
+    else:  # else, assume numpy array
+        return extractor(input_data, **extractor_kwargs)
 
 
 def extract_identity_features(input_data: ndarray) -> ndarray:
@@ -80,25 +87,25 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
 
     outputs = []
     for i_band in range(n_bands):
-        input_band = torch.from_numpy(input_data[None, i_band:i_band + 1, :, :]).float().to(device)
+        input_band = torch.from_numpy(input_data[None, i_band : i_band + 1, :, :]).float().to(device)
         padded_input = pad(input_band, band_name=i_band)
         padded_current_predictions = model(padded_input).detach().numpy()
-        current_predictions = padded_current_predictions[:, :, :input_band.shape[2], :input_band.shape[3]]  #unpad
+        current_predictions = padded_current_predictions[:, :, : input_band.shape[2], : input_band.shape[3]]  # unpad
         outputs.append(current_predictions)
     output = np.concatenate(outputs, axis=1)
     return output[0, :, :, :]
 
 
-def load_model(model_scale:float):
+def load_model(model_scale: float):
     """
     Load the model from disk and return it along with the device it's loaded on to.
     :param model_scale: Scale of the model to use. Must be one of [1.0, 0.5, 0.25, 0.125]
     :return: Torch model and the device it's loaded on to
     """
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = UNet(in_channels=1, num_classes=NUM_FLAIR_CLASSES, model_scale=model_scale)
     file_name = get_flair_model_file_name(model_scale)
-    state = torch.load(Path("models") / file_name, map_location=device, weights_only=True)
+    state = torch.load(Path(__file__).parent / "../../models" / file_name, map_location=device, weights_only=True)
     model.load_state_dict(state)
     model.eval()
     return model, device
@@ -118,19 +125,16 @@ def pad(input_band, band_name):
         pad_width = 16 - width % 16
         pad_height = 16 - height % 16
         padded = torch.nn.functional.pad(input_band, (0, pad_height, 0, pad_width))
-        logger.info(f"Added temporary padding for band {band_name}: (original {height} x {width})"
-                    f" -> (padded {height + pad_height} x {width + pad_width})")
+        logger.info(
+            f"Added temporary padding for band {band_name}: (original {height} x {width})"
+            f" -> (padded {height + pad_height} x {width + pad_width})"
+        )
 
     return padded
 
 
 def get_flair_model_file_name(model_scale: float) -> str:
-    scale_mapping = {
-        1.0: "1_0",
-        0.5: "0_5",
-        0.25: "0_25",
-        0.125: "0_125"
-    }
+    scale_mapping = {1.0: "1_0", 0.5: "0_5", 0.25: "0_25", 0.125: "0_125"}
 
     scale = None
     for k, v in scale_mapping.items():
