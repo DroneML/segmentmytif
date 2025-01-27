@@ -7,7 +7,7 @@ import xarray as xr
 
 
 def get_label_array(
-    ras_template: xr.DataArray,
+    input_data: xr.DataArray,
     geom_pos: gpd.GeoSeries,
     geom_neg: gpd.GeoSeries,
     mode: Literal["normal", "parallel", "safe"] = "normal",
@@ -32,24 +32,28 @@ def get_label_array(
         The difference between parallel and safe is safe only uses single thread, which will be
         configured in dask schedular.
 
-    :param xr.DataArray ras_template: template raster with disired shape of the label array
+    :param xr.DataArray input_data: input features as a template raster
     :param gpd.GeoSeries geom: Geometry of the label
     :param Literal["normal", "parallel", "safe"] mode: Mode of execution, defaults to "normal"
     :return xr.DataArray: Generated label array
     """
     # If the template raster has a "band" dimension
     # Select the first band, since label will be 2D
-    if "band" in ras_template.dims:
-        ras_template = ras_template.isel(band=0)
+    if "band" in input_data.dims:
+        input_template = input_data.isel(band=0).drop_vars("band")
 
-    positive_labels = _geom_to_label_array(ras_template, geom_pos, 1, mode=mode)
-    negative_labels = _geom_to_label_array(ras_template, geom_neg, 0, mode=mode)
 
-    return -(positive_labels * negative_labels)  # Combine positive and negative labels
+    positive_labels = _geom_to_label_array(input_template, geom_pos, 1, mode=mode)
+    negative_labels = _geom_to_label_array(input_template, geom_neg, 0, mode=mode)
+
+    labels = -(positive_labels * negative_labels)  # Combine positive and negative labels
+
+    # repeat to match the input_template
+    return labels.expand_dims(dim={"band": input_data.sizes["band"]})
 
 
 def _geom_to_label_array(
-    ras_template: xr.DataArray,
+    input_template: xr.DataArray,
     geom: gpd.GeoSeries,
     value: Literal[0, 1],
     mode: Literal["normal", "parallel", "safe"] = "normal",
@@ -57,7 +61,7 @@ def _geom_to_label_array(
     """Generate a label array from a geometry."""
     # Make a template from the shape of the template raster
     # Fill it with the label value
-    labels_template = xr.full_like(ras_template, fill_value=value, dtype=np.int32)
+    labels_template = xr.full_like(input_template, fill_value=value, dtype=np.int32)
 
     # Set the nodata value to -1 indicating other classes
     labels_template = labels_template.rio.write_nodata(-1)

@@ -1,11 +1,14 @@
 import logging
 from enum import Enum
 from pathlib import Path
+from typing import Literal
 
 from dask.array.core import Array
+import dask.array as da
 import xarray as xr
 import numpy as np
 import torch
+import rioxarray
 from numpy import ndarray
 from segmentmytif.logging_config import log_duration, log_array
 from segmentmytif.utils.io import save_tiff, read_geotiff
@@ -28,46 +31,111 @@ class FeatureType(Enum):
 
 
 def get_features(
-    raster: xr.DataArray, input_path: Path, feature_type: FeatureType, features_path: Path, **extractor_kwargs
+    raster: xr.DataArray,
+    input_path: Path,
+    feature_type: FeatureType,
+    features_path: Path,
+    chunk_overlap: int = 200,
+    mode: Literal["normal", "parallel", "safe"] = "normal",
+    **extractor_kwargs,
 ):
-    """
-    Extract features from the input data, or load them from disk if they have already been extracted.
+    """Extract features from the input data, or load them from disk if they have already been extracted.
+
     :param input_data: 'Raw' input data as stored in TIFs by a GIS user. Shape: [n_bands, height, width]
     :param input_path:
     :param feature_type: See FeatureType enum for options.
     :param features_path: Path used for caching features
+    :param chunk_overlap: Overlap between chunks when chunk-wise processing is enanbled
     :param extractor_kwargs: options for the feature extractor
     :return:
     """
     if feature_type == FeatureType.IDENTITY:
         return raster
-    else:
-        if features_path is None:
-            features_path = get_features_path(input_path, feature_type)
-        if not features_path.exists():
-            logger.info(
-                f"No existing {feature_type.name} features found at {features_path} for input data with shape {raster.data.shape}"
-            )
-            with log_duration(f"Extracting {feature_type.name} features", logger):
-                features_data = extract_features(raster.data, feature_type, **extractor_kwargs)
-            log_array(features_data, logger, array_name=f"{feature_type.name} features")
-            logger.info(f"Saving {feature_type.name} features (shape {features_data.shape}) to {features_path}")
-            features = xr.DataArray(features_data, dims=raster.dims).compute()
-        loaded_features, _ = read_geotiff(features_path)
-        logger.info(f"Loading {feature_type.name} features (shape {loaded_features.shape}) from {features_path}")
-        return loaded_features
+
+    if features_path is None:
+        features_path = get_features_path(input_path, feature_type)
+    if not features_path.exists():
+        # Extract features
+        msg = (
+            f"No existing {feature_type.name} features found at {features_path} "
+            f"for input data with shape {raster.data.shape}"
+        )
+        logger.info(msg)
+
+        with log_duration(f"Extracting {feature_type.name} features", logger):
+            features_data = extract_features(raster.data, feature_type, chunk_overlap, **extractor_kwargs)
+        log_array(features_data, logger, array_name=f"{feature_type.name} features")
+
+        # Create xarray DataArray with the extracted features
+        # Keep the geospatial information from the input raster
+        features = xr.DataArray(
+            features_data,
+            dims=raster.dims,
+            coords={"band": range(features_data.shape[0]), "y": raster.y, "x": raster.x},
+        )
+        features.rio.write_crs(raster.rio.crs, inplace=True)
+        features = features.rio.write_transform(raster.rio.transform(), inplace=True)
+        features.attrs = raster.attrs
+
+        # Save the features to disk
+        msg = f"Saving {feature_type.name} features (shape {features_data.shape}) to {features_path}"
+        logger.info(msg)
+        features.rio.to_raster(features_path)
+
+    msg = f"Loading {feature_type.name} features (shape {loaded_features.shape}) from {features_path}"
+    logger.info(msg)
+    match mode:
+        case "normal":
+            loaded_features = rioxarray.open_rasterio(features_path)
+        case "parallel" | "safe":
+            # Unpack the chunk sizes from the input raster
+            chunks = {
+                "band": raster.chunksizes["band"][0],
+                "x": raster.chunksizes["x"][0],
+                "y": raster.chunksizes["y"][0],
+            }
+            loaded_features = rioxarray.open_rasterio(features_path, chunks=chunks)
+
+    return loaded_features
 
 
-def extract_features(input_data, feature_type, **extractor_kwargs):
+def extract_features(input_data, feature_type, chunk_overlap, **extractor_kwargs):
     extractor = {
-        FeatureType.IDENTITY: extract_identity_features,
         FeatureType.FLAIR: extract_flair_features,
     }[feature_type]
 
-    if isinstance(input_data, Array):  # If dask array, map feature extraction function to each block
-        return input_data.map_blocks(extractor, **extractor_kwargs)
-    else:  # else, assume numpy array
-        return extractor(input_data, **extractor_kwargs)
+    # If dask array, map feature extraction function to each block
+    # The blockwise extraction is only applied to FLAIR features
+    # FeatureType.IDENTITY directly returns the input data, thus no need to map_overlap
+    if isinstance(input_data, Array):
+        # Make template dask array according to the extractor
+        if feature_type == FeatureType.FLAIR:
+            # If FLAIR, output features has bands * NUM_FLAIR_CLASSES
+            meta = da.zeros_like(
+                input_data,
+                shape=(input_data.shape[0] * NUM_FLAIR_CLASSES, input_data.shape[1], input_data.shape[2]),
+            )
+        else:
+            msg = f"Unsupported feature type: {feature_type}"
+            raise ValueError(msg)
+
+        # Feature extraction per block with overlap
+        features = input_data.map_overlap(
+            extractor,
+            **extractor_kwargs,
+            depth=(0, chunk_overlap, chunk_overlap),
+            boundary="none",
+            meta=meta,
+        )
+
+        # Since extractor changed the shape of the data
+        # We call "compute_chunk_sizes" to align the shape with meta
+        features = features.compute_chunk_sizes()
+
+    else:
+        features = extractor(input_data, **extractor_kwargs)
+
+    return features
 
 
 def extract_identity_features(input_data: ndarray) -> ndarray:

@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 import numpy as np
 import dask.array as da
@@ -27,6 +27,7 @@ def read_input_and_labels_and_save_predictions(
     features_path: Path = None,
     mode: Literal["normal", "parallel", "safe"] = "normal",
     chunks: dict = None,
+    chunk_overlap: int = 200,
     **extractor_kwargs,
 ) -> None:
     logger.info("read_input_and_labels_and_save_predictions called with the following arguments:")
@@ -48,20 +49,28 @@ def read_input_and_labels_and_save_predictions(
             msg = f"Invalid mode: {mode}"
             raise ValueError(msg)
 
-    features = get_features(raster, raster_path, feature_type, features_path, **extractor_kwargs)
+    features = get_features(
+        raster, raster_path, feature_type, features_path, chunk_overlap=chunk_overlap, mode=mode, **extractor_kwargs
+    )
 
     # Load vector labels as geodataframes, and align CRS with input data
     pos_gdf = gpd.read_file(pos_labels_path).to_crs(raster.rio.crs)
-    neg_gdf = gpd.read_file(pos_labels_path).to_crs(raster.rio.crs)
+    neg_gdf = gpd.read_file(neg_labels_path).to_crs(raster.rio.crs)
 
     # Get label arrays
-    labels = get_label_array(raster, pos_gdf, neg_gdf, mode=mode)
+    labels = get_label_array(features, pos_gdf, neg_gdf, mode=mode)
 
     # Make predictions
-    prediction_map = make_predictions(features.data, labels)
+    prediction_map = make_predictions(features.data, labels.data)
 
     # Save predictions
-    save_tiff(prediction_map, output_path, profile)
+    prediction_map.to_raster(output_path)
+
+    if output_path.exists():
+        return output_path
+    msg = f"Failed to save predictions to {output_path}"
+    logger.error(msg)
+    return None
 
 
 def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
