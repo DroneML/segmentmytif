@@ -44,7 +44,7 @@ def get_features(input_data: np.ndarray, input_path: Path, feature_type: Feature
             features_path = get_features_path(input_path, feature_type)
         if not features_path.exists():
             logger.info(f"No existing {feature_type.name} features found at {features_path} for input data with shape {input_data.shape}")
-            with log_duration(f"Extracting {feature_type.name} features", logger):
+            with log_duration(f"Extract {feature_type.name} features", logger):
                 features = extract_features(input_data, feature_type, **extractor_kwargs)
             log_array(features, logger, array_name=f"{feature_type.name} features")
             logger.info(f"Saving {feature_type.name} features (shape {features.shape}) to {features_path}")
