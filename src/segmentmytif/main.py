@@ -9,6 +9,7 @@ from sklearn.ensemble import RandomForestClassifier
 import geopandas as gpd
 import rioxarray
 import dask
+import xarray as xr
 
 from segmentmytif.features import get_features, FeatureType
 from segmentmytif.logging_config import setup_logger, log_duration, log_array
@@ -27,7 +28,7 @@ def read_input_and_labels_and_save_predictions(
     features_path: Path = None,
     mode: Literal["normal", "parallel", "safe"] = "normal",
     chunks: dict = None,
-    chunk_overlap: int = 200,
+    chunk_overlap: int = 16,
     **extractor_kwargs,
 ) -> None:
     logger.info("read_input_and_labels_and_save_predictions called with the following arguments:")
@@ -64,10 +65,21 @@ def read_input_and_labels_and_save_predictions(
     prediction_map = make_predictions(features.data, labels.data)
 
     # Save predictions
-    prediction_map.to_raster(output_path)
+    prediction_raster = xr.DataArray(
+            prediction_map,
+            dims=raster.dims,
+            coords={"band": range(prediction_map.shape[0]), "y": raster.y, "x": raster.x},
+        )
+    prediction_raster = prediction_raster.rio.write_crs(raster.rio.crs, inplace=True)
+    prediction_raster = prediction_raster.rio.write_transform(raster.rio.transform(), inplace=True)
+    prediction_raster.attrs = raster.attrs
+    prediction_raster.rio.to_raster(output_path)
 
+    # If successful, return the output path
     if output_path.exists():
         return output_path
+
+    # If failed, log an error and return None
     msg = f"Failed to save predictions to {output_path}"
     logger.error(msg)
     return None

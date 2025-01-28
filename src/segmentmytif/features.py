@@ -35,7 +35,7 @@ def get_features(
     input_path: Path,
     feature_type: FeatureType,
     features_path: Path,
-    chunk_overlap: int = 200,
+    chunk_overlap: int = 16,
     mode: Literal["normal", "parallel", "safe"] = "normal",
     **extractor_kwargs,
 ):
@@ -73,7 +73,7 @@ def get_features(
             dims=raster.dims,
             coords={"band": range(features_data.shape[0]), "y": raster.y, "x": raster.x},
         )
-        features.rio.write_crs(raster.rio.crs, inplace=True)
+        features = features.rio.write_crs(raster.rio.crs, inplace=True)
         features = features.rio.write_transform(raster.rio.transform(), inplace=True)
         features.attrs = raster.attrs
 
@@ -82,8 +82,6 @@ def get_features(
         logger.info(msg)
         features.rio.to_raster(features_path)
 
-    msg = f"Loading {feature_type.name} features (shape {loaded_features.shape}) from {features_path}"
-    logger.info(msg)
     match mode:
         case "normal":
             loaded_features = rioxarray.open_rasterio(features_path)
@@ -95,6 +93,8 @@ def get_features(
                 "y": raster.chunksizes["y"][0],
             }
             loaded_features = rioxarray.open_rasterio(features_path, chunks=chunks)
+    msg = f"Loading {feature_type.name} features (shape {loaded_features.shape}) from {features_path}"
+    logger.info(msg)
 
     return loaded_features
 
