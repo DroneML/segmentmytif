@@ -4,8 +4,6 @@ from segmentmytif.features import extract_features, FeatureType, NUM_FLAIR_CLASS
 
 
 class TestExtractFeatures:
-
-
     def test_extract_identity_features(self):
         input_data = np.array(get_generated_multiband_image())
         result = extract_features(input_data, FeatureType.IDENTITY)
