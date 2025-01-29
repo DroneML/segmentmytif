@@ -36,7 +36,7 @@ def read_input_and_labels_and_save_predictions(
         logger.info(f"{k}: {v}")
 
     if chunks is None:
-        chunks = {"band": 1, "x": 1000, "y": 1000}
+        chunks = {"band": 1, "x": 1024, "y": 1024}
 
     match mode:
         case "normal":
@@ -75,14 +75,7 @@ def read_input_and_labels_and_save_predictions(
     prediction_raster.attrs = raster.attrs
     prediction_raster.rio.to_raster(output_path)
 
-    # If successful, return the output path
-    if output_path.exists():
-        return output_path
-
-    # If failed, log an error and return None
-    msg = f"Failed to save predictions to {output_path}"
-    logger.error(msg)
-    return None
+    return output_path
 
 
 def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:

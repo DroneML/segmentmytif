@@ -99,7 +99,7 @@ def get_features(
     return loaded_features
 
 
-def extract_features(input_data, feature_type, chunk_overlap, **extractor_kwargs):
+def extract_features(input_data, feature_type, chunk_overlap=16, **extractor_kwargs):
     extractor = {
         FeatureType.FLAIR: extract_flair_features,
     }[feature_type]
