@@ -10,7 +10,7 @@ on:
 
 jobs:
   build_single:
-    name: Build including downloader (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Build (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
@@ -33,12 +33,12 @@ jobs:
           python -m pip install --upgrade pip setuptools
           python -m pip install .[dev,publishing]
       - name: Run unit tests
-        run: python -m pytest -v --downloader
+        run: python -m pytest -v
       - name: Verify that we can build the package
         run: python -m build
 
   build_all:
-    name: Build for (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Build for (${{ matrix.python-version }}, ${{ matrix.os }}) (excl downloader)
     needs: build_single
     runs-on: ${{ matrix.os }}
     strategy:
@@ -66,6 +66,6 @@ jobs:
           python -m pip install --upgrade pip setuptools
           python -m pip install .[dev,publishing]
       - name: Run unit tests
-        run: python -m pytest -v
+        run: python -m pytest -v -m "not downloader"
       - name: Verify that we can build the package
         run: python -m build
