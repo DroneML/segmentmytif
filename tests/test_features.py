@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
-from segmentmytif.features import extract_features, FeatureType, NUM_FLAIR_CLASSES, get_flair_model_file_name
+from segmentmytif.features import extract_features, FeatureType, NUM_FLAIR_CLASSES, get_flair_model_file_name, \
+    load_model
 
 
 class TestExtractFeatures:
@@ -49,3 +50,9 @@ def test_get_flair_model_file_name_with_valid_scales(model_scale, file_name):
 def test_get_flair_model_file_name_with_invalid_scales(model_scale):
     with pytest.raises(ValueError):
         get_flair_model_file_name(model_scale)
+
+@pytest.mark.downloader
+@pytest.mark.parametrize(["model_scale"],
+                         [(0.125,),(0.25,),(0.5,),(1.0,)])
+def test_load_model_downloads_model_from_hugging_face(model_scale, tmpdir):
+    load_model(model_scale, models_dir=tmpdir)
