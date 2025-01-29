@@ -9,15 +9,47 @@ on:
     - main
 
 jobs:
+  build_single:
+    name: Build including downloader (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ 'ubuntu-latest' ]
+        python-version: [ '3.12' ]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Python info
+        shell: bash -e {0}
+        run: |
+          which python
+          python --version
+      - name: Upgrade pip and install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools
+          python -m pip install .[dev,publishing]
+      - name: Run unit tests
+        run: python -m pytest -v --downloader
+      - name: Verify that we can build the package
+        run: python -m build
 
-  build:
+  build_all:
     name: Build for (${{ matrix.python-version }}, ${{ matrix.os }})
+    needs: build_single
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
-        python-version: ['3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.12']
+        exclude:
+          # already tested in build_single job
+          - python-version: 3.12
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
