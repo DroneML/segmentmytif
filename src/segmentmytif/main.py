@@ -26,7 +26,7 @@ def read_input_and_labels_and_save_predictions(
     output_path: Path,
     feature_type=FeatureType.IDENTITY,
     features_path: Path = None,
-    mode: Literal["normal", "parallel", "safe"] = "normal",
+    compute_mode: Literal["normal", "parallel", "safe"] = "normal",
     chunks: dict = None,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
     **extractor_kwargs,
@@ -38,7 +38,7 @@ def read_input_and_labels_and_save_predictions(
     if chunks is None:
         chunks = {"band": 1, "x": 1024, "y": 1024}
 
-    match mode:
+    match compute_mode:
         case "normal":
             raster = rioxarray.open_rasterio(raster_path)  # Load in memory
         case "parallel":
@@ -47,11 +47,11 @@ def read_input_and_labels_and_save_predictions(
             dask.config.set(scheduler="synchronous")
             raster = rioxarray.open_rasterio(raster_path, chunks=chunks)
         case _:
-            msg = f"Invalid mode: {mode}"
+            msg = f"Invalid compute mode: {compute_mode}"
             raise ValueError(msg)
 
     features = get_features(
-        raster, raster_path, feature_type, features_path, chunk_overlap=chunk_overlap, mode=mode, **extractor_kwargs
+        raster, raster_path, feature_type, features_path, chunk_overlap=chunk_overlap, compute_mode=compute_mode, **extractor_kwargs
     )
 
     # Load vector labels as geodataframes, and align CRS with input data
@@ -59,7 +59,7 @@ def read_input_and_labels_and_save_predictions(
     neg_gdf = gpd.read_file(neg_labels_path).to_crs(raster.rio.crs)
 
     # Get label arrays
-    labels = get_label_array(features, pos_gdf, neg_gdf, mode=mode)
+    labels = get_label_array(features, pos_gdf, neg_gdf, compute_mode=compute_mode)
 
     # Make predictions
     prediction_map = make_predictions(features.data, labels.data)
@@ -184,7 +184,7 @@ def parse_args():
     )
     parser.add_argument(
         "-m",
-        "--mode",
+        "--compute_mode",
         type=str,
         choices=["normal", "parallel", "safe"],
         default="normal",

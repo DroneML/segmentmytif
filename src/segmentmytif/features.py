@@ -37,7 +37,7 @@ def get_features(
     feature_type: FeatureType,
     features_path: Path,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
-    mode: Literal["normal", "parallel", "safe"] = "normal",
+    compute_mode: Literal["normal", "parallel", "safe"] = "normal",
     **extractor_kwargs,
 ):
     """Extract features from the input data, or load them from disk if they have already been extracted.
@@ -83,7 +83,7 @@ def get_features(
         logger.info(msg)
         features.rio.to_raster(features_path)
 
-    match mode:
+    match compute_mode:
         case "normal":
             loaded_features = rioxarray.open_rasterio(features_path)
         case "parallel" | "safe":
