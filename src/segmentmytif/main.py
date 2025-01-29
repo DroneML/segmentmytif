@@ -11,7 +11,7 @@ import rioxarray
 import dask
 import xarray as xr
 
-from segmentmytif.features import get_features, FeatureType
+from segmentmytif.features import get_features, FeatureType, DEFAULT_CHUNK_OVERLAP
 from segmentmytif.logging_config import setup_logger, log_duration, log_array
 from segmentmytif.utils.io import read_geotiff, save_tiff
 from segmentmytif.utils.geospatial import get_label_array
@@ -28,7 +28,7 @@ def read_input_and_labels_and_save_predictions(
     features_path: Path = None,
     mode: Literal["normal", "parallel", "safe"] = "normal",
     chunks: dict = None,
-    chunk_overlap: int = 16,
+    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
     **extractor_kwargs,
 ) -> None:
     logger.info("read_input_and_labels_and_save_predictions called with the following arguments:")
@@ -66,10 +66,10 @@ def read_input_and_labels_and_save_predictions(
 
     # Save predictions
     prediction_raster = xr.DataArray(
-            prediction_map,
-            dims=raster.dims,
-            coords={"band": range(prediction_map.shape[0]), "y": raster.y, "x": raster.x},
-        )
+        prediction_map,
+        dims=raster.dims,
+        coords={"band": range(prediction_map.shape[0]), "y": raster.y, "x": raster.x},
+    )
     prediction_raster = prediction_raster.rio.write_crs(raster.rio.crs, inplace=True)
     prediction_raster = prediction_raster.rio.write_transform(raster.rio.transform(), inplace=True)
     prediction_raster.attrs = raster.attrs
@@ -171,7 +171,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Process input and output TIFF files.")
 
     parser.add_argument("-i", "--input", type=Path, help="Path to the input TIFF file")
-    parser.add_argument("-l", "--labels", type=Path, help="Path to the training labels TIFF file")
+    parser.add_argument("-lp", "--pos_labels", type=Path, help="Path to the positive training labels file, shp or gpkg")
+    parser.add_argument("-ln", "--neg_labels", type=Path, help="Path to the negative training labels file, shp or gpkg")
     parser.add_argument("-p", "--predictions", type=Path, help="Path to the predictions output TIFF file")
     parser.add_argument(
         "-f",
@@ -180,6 +181,28 @@ def parse_args():
         choices=list(FeatureType),
         default=FeatureType.IDENTITY,
         help='Type of feature being used. "Identity" means the raw input is directly used as features.',
+    )
+    parser.add_argument(
+        "-m",
+        "--mode",
+        type=str,
+        choices=["normal", "parallel", "safe"],
+        default="normal",
+        help="Mode for reading the input raster data.",
+    )
+    parser.add_argument(
+        "-c",
+        "--chunks",
+        type=dict,
+        default={"band": 1, "x": 1024, "y": 1024},
+        help="Chunk size for reading the input raster data.",
+    )
+    parser.add_argument(
+        "-o",
+        "--chunk_overlap",
+        type=int,
+        default=DEFAULT_CHUNK_OVERLAP,
+        help="Chunk overlap size for reading the input raster data.",
     )
 
     args = parser.parse_args()
@@ -194,8 +217,11 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     input_path = args.input
-    labels_path = args.labels
+    pos_labels_path = args.pos_labels
+    neg_labels_path = args.neg_labels
     predictions_path = args.predictions
     feature_type = args.feature_type
 
-    read_input_and_labels_and_save_predictions(input_path, labels_path, predictions_path, feature_type=feature_type)
+    read_input_and_labels_and_save_predictions(
+        input_path, pos_labels_path, neg_labels_path, predictions_path, feature_type=feature_type
+    )

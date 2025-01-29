@@ -15,6 +15,7 @@ from segmentmytif.utils.io import save_tiff, read_geotiff
 from segmentmytif.utils.models import UNet
 
 NUM_FLAIR_CLASSES = 19
+DEFAULT_CHUNK_OVERLAP = 25  # Default chunk overlap size for feature extraction
 logger = logging.getLogger(__name__)
 
 
@@ -35,7 +36,7 @@ def get_features(
     input_path: Path,
     feature_type: FeatureType,
     features_path: Path,
-    chunk_overlap: int = 16,
+    chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
     mode: Literal["normal", "parallel", "safe"] = "normal",
     **extractor_kwargs,
 ):
