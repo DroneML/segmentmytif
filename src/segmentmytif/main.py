@@ -35,23 +35,20 @@ def read_input_and_labels_and_save_predictions(
     for k, v in locals().items():
         logger.info(f"{k}: {v}")
 
-    if chunks is None:
-        chunks = {"band": 1, "x": 1024, "y": 1024}
+    # Set compute mode, and get dask kwargs for reading raster data
+    dask_kwargs = _set_compute_mode(compute_mode, chunks)
 
-    match compute_mode:
-        case "normal":
-            raster = rioxarray.open_rasterio(raster_path)  # Load in memory
-        case "parallel":
-            raster = rioxarray.open_rasterio(raster_path, chunks=chunks)
-        case "safe":
-            dask.config.set(scheduler="synchronous")
-            raster = rioxarray.open_rasterio(raster_path, chunks=chunks)
-        case _:
-            msg = f"Invalid compute mode: {compute_mode}"
-            raise ValueError(msg)
+    # Load raster data
+    raster = rioxarray.open_rasterio(raster_path, **dask_kwargs)
 
     features = get_features(
-        raster, raster_path, feature_type, features_path, chunk_overlap=chunk_overlap, compute_mode=compute_mode, **extractor_kwargs
+        raster,
+        raster_path,
+        feature_type,
+        features_path,
+        chunk_overlap=chunk_overlap,
+        compute_mode=compute_mode,
+        **extractor_kwargs,
     )
 
     # Load vector labels as geodataframes, and align CRS with input data
@@ -165,6 +162,31 @@ def subsample(instances, sample_size):
     indices = np.arange(n_instances)
     sample_indices = np.random.choice(indices, size=min(sample_size, n_instances), replace=False)
     return instances[sample_indices]
+
+
+def _set_compute_mode(compute_mode: Literal["normal", "parallel", "safe"], chunks: dict) -> dict:
+    """Set compute mode for read_input_and_labels_and_save_predictions."""
+
+    # Set default chunks
+    if chunks is None:
+        chunks = {"band": 1, "x": 1024, "y": 1024}
+
+    # Default dask kwargs
+    dask_kwargs = {}
+
+    match compute_mode:
+        case "normal":
+            return dask_kwargs
+        case "parallel":
+            dask.config.set(scheduler="threads")
+            dask_kwargs["chunks"] = chunks
+        case "safe":
+            dask.config.set(scheduler="synchronous")
+            dask_kwargs["chunks"] = chunks
+        case _:
+            msg = f"Invalid compute mode: {compute_mode}"
+            raise ValueError(msg)
+    return dask_kwargs
 
 
 def parse_args():
