@@ -4,7 +4,9 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from huggingface_hub import hf_hub_download
 from numpy import ndarray
+
 from segmentmytif.logging_config import log_duration, log_array
 from segmentmytif.utils.io import save_tiff, read_geotiff
 from segmentmytif.utils.models import UNet
@@ -89,16 +91,23 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
     return output[0, :, :, :]
 
 
-def load_model(model_scale:float):
+def load_model(model_scale:float, models_dir: Path = Path("models")):
     """
     Load the model from disk and return it along with the device it's loaded on to.
     :param model_scale: Scale of the model to use. Must be one of [1.0, 0.5, 0.25, 0.125]
+    :param models_dir: Path to the directory containing the model files
     :return: Torch model and the device it's loaded on to
     """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = UNet(in_channels=1, num_classes=NUM_FLAIR_CLASSES, model_scale=model_scale)
     file_name = get_flair_model_file_name(model_scale)
-    state = torch.load(Path("models") / file_name, map_location=device, weights_only=True)
+    model_path = models_dir / file_name
+
+    if not model_path.exists():
+        logger.info(f"Model not found at '{model_path}', downloading from Hugging Face")
+        hf_hub_download(repo_id="DroneML/FLAIR-feature-extractor", filename=file_name, local_dir=models_dir)
+
+    state = torch.load(model_path, map_location=device, weights_only=True)
     model.load_state_dict(state)
     model.eval()
     return model, device
