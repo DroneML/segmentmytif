@@ -114,14 +114,14 @@ def subsample(instances, sample_size):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Process input and output TIFF files.")
+    parser = argparse.ArgumentParser(description="Classify pixels in the input image using a model trained on the labels.")
 
     parser.add_argument('-i', '--input', type=Path, help='Path to the input TIFF file')
     parser.add_argument('-l', '--labels', type=Path, help='Path to the training labels TIFF file')
     parser.add_argument('-p', '--predictions', type=Path, help='Path to the predictions output TIFF file')
     parser.add_argument('-f', '--feature_type', type=FeatureType.from_string, choices=list(FeatureType),
                         default=FeatureType.FLAIR,
-                        help='Type of feature being used. "Identity" means the raw input is directly used as features.')
+                        help=f'Type of feature being used. Default: {FeatureType.FLAIR.name}')
 
     args = parser.parse_args()
 
