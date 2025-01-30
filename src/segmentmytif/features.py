@@ -50,7 +50,7 @@ def get_features(
     :param features_path: Path used for caching features
     :param chunk_overlap: Overlap between chunks when chunk-wise processing is enanbled
     :param extractor_kwargs: options for the feature extractor
-    :return:
+    :return: extracted features as xr.DataArray
     """
     if feature_type == FeatureType.IDENTITY:
         return raster
