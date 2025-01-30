@@ -10,7 +10,7 @@ def get_label_array(
     input_data: xr.DataArray,
     geom_pos: gpd.GeoSeries,
     geom_neg: gpd.GeoSeries,
-    mode: Literal["normal", "parallel", "safe"] = "normal",
+    compute_mode: Literal["normal", "parallel", "safe"] = "normal",
 ) -> xr.DataArray:
     """Generate a label array for binary classification from pos/neg geometries.
 
@@ -43,8 +43,8 @@ def get_label_array(
         input_template = input_data.isel(band=0).drop_vars("band")
 
 
-    positive_labels = _geom_to_label_array(input_template, geom_pos, 1, mode=mode)
-    negative_labels = _geom_to_label_array(input_template, geom_neg, 0, mode=mode)
+    positive_labels = _geom_to_label_array(input_template, geom_pos, 1, compute_mode=compute_mode)
+    negative_labels = _geom_to_label_array(input_template, geom_neg, 0, compute_mode=compute_mode)
 
     labels = -(positive_labels * negative_labels)  # Combine positive and negative labels
 
@@ -56,7 +56,7 @@ def _geom_to_label_array(
     input_template: xr.DataArray,
     geom: gpd.GeoSeries,
     value: Literal[0, 1],
-    mode: Literal["normal", "parallel", "safe"] = "normal",
+    compute_mode: Literal["normal", "parallel", "safe"] = "normal",
 ) -> xr.DataArray:
     """Generate a label array from a geometry."""
     # Make a template from the shape of the template raster
@@ -66,10 +66,10 @@ def _geom_to_label_array(
     # Set the nodata value to -1 indicating other classes
     labels_template = labels_template.rio.write_nodata(-1)
 
-    match mode:
+    match compute_mode:
         # Assumning labels_template can fit in memory
         case "normal":
-            label_array = labels_template.rio.clip(geom, drop=False)
+            label_array = labels_template.rio.clip(geom.geometry, drop=False)
         # Block processing for large rasters
         case "parallel" | "safe":
             label_array = xr.map_blocks(
@@ -79,7 +79,7 @@ def _geom_to_label_array(
                 template=labels_template,
             )
         case _:
-            msg = f"Mode {mode} not supported"
+            msg = f"Mode {compute_mode} not supported"
             raise ValueError(msg)
 
     return label_array
