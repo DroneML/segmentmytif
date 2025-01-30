@@ -1,15 +1,40 @@
 [![workflow pypi badge](https://img.shields.io/pypi/v/segmentmytif.svg?colorB=blue)](https://pypi.python.org/project/segmentmytif/) [![Documentation Status](https://readthedocs.org/projects/segmentmytif/badge/?version=latest)](https://segmentmytif.readthedocs.io/en/latest/?badge=latest) [![build](https://github.com/DroneML/segmentmytif/actions/workflows/build.yml/badge.svg)](https://github.com/DroneML/segmentmytif/actions/workflows/build.yml)
 
-## How to use segmentmytif
+# Segmentmytif
 
-Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors.
+Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors. Segmentmytif can be used as a standalone commandline tool or as the backend for the QGIS plugin called DroneML.
 
 The project setup is documented in [project_setup.md](devdocs/project_setup.md).
 
+## Typical usage
+Let's say you've got the image on the left, along with the labels (superimposed on the image) on the right.
+
+![image](https://github.com/user-attachments/assets/08bcfd85-3042-4550-af8f-a142126e2428)
+![image](https://github.com/user-attachments/assets/673f8416-1d1f-420f-9558-100d1d60c181)
+
+You run the commandline tool as follows, selecting both input image and labels, the path where the output should be, and the type of features to use.
+
+```console
+python main.py --input image.tif --labels labels.tif --predictions output.tif
+```
+
+The resulting output looks like:
+
+![image](https://github.com/user-attachments/assets/46d6629d-65df-4e4d-81f1-07bfef38ca57)
+
+_To test this with our testdata, run:_
+```console
+python src/segmentmytif/main.py --input tests/test_data/test_image.tif -l tests/test_data/test_image_labels.tif -p output.tif
+```
+
 ## Installation
 
-To install segmentmytif from GitHub repository, do:
+There are 2 ways to install Segmentmytif. Either run:
+```console
+pip install segmentmytif
+```
 
+Or run:
 ```console
 git clone git@github.com:DroneML/segmentmytif.git
 cd segmentmytif
