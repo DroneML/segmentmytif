@@ -118,8 +118,8 @@ bump-my-version bump patch  # bumps from e.g. 0.3.2 to 0.3.3
 This section describes how to make a release in 3 parts:
 
 1. preparation
-1. making a release on PyPI
 1. making a release on GitHub
+1. making a release on PyPI
 
 ### (1/3) Preparation
 
@@ -128,59 +128,11 @@ This section describes how to make a release in 3 parts:
 1. Make sure the [version has been updated](#versioning).
 1. Run the unit tests with `pytest -v`
 
-### (2/3) PyPI
 
-In a new terminal:
+### (2/3) GitHub
 
-```shell
-# OPTIONAL: prepare a new directory with fresh git clone to ensure the release
-# has the state of origin/main branch
-cd $(mktemp -d segmentmytif.XXXXXX)
-git clone git@github.com:DroneML/segmentmytif .
+Make a [release on GitHub](https://github.com/DroneML/segmentmytif/releases/new).GitHub-Zenodo integration will also trigger Zenodo into making a snapshot of your repository and sticking a DOI on it.
 
-# make sure to have a recent version of pip and the publishing dependencies
-python -m pip install --upgrade pip
-python -m pip install .[publishing]
+### (3/3) PyPI
 
-# create the source distribution and the wheel
-python -m build
-
-# upload to test pypi instance (requires credentials)
-python -m twine upload --repository testpypi dist/*
-```
-
-Visit
-[https://test.pypi.org/project/segmentmytif](https://test.pypi.org/project/segmentmytif)
-and verify that your package was uploaded successfully. Keep the terminal open, we'll need it later.
-
-In a new terminal, without an activated virtual environment or an env directory:
-
-```shell
-cd $(mktemp -d segmentmytif-test.XXXXXX)
-
-# prepare a clean virtual environment and activate it
-python -m venv env
-source env/bin/activate
-
-# make sure to have a recent version of pip and setuptools
-python -m pip install --upgrade pip
-
-# install from test pypi instance:
-python -m pip -v install --no-cache-dir \
---index-url https://test.pypi.org/simple/ \
---extra-index-url https://pypi.org/simple segmentmytif
-```
-
-Check that the package works as it should when installed from pypitest.
-
-Then upload to pypi.org with:
-
-```shell
-# Back to the first terminal,
-# FINAL STEP: upload to PyPI (requires credentials)
-python -m twine upload dist/*
-```
-
-### (3/3) GitHub
-
-Don't forget to also make a [release on GitHub](https://github.com/DroneML/segmentmytif/releases/new).GitHub-Zenodo integration will also trigger Zenodo into making a snapshot of your repository and sticking a DOI on it.
+The Github release in the last step will automatically trigger workflow that will upload the new release on PyPI. No manual steps involved.
