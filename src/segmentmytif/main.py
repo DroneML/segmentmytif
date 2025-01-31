@@ -186,7 +186,9 @@ def _set_compute_mode(compute_mode: Literal["normal", "parallel", "safe"], chunk
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Process input and output TIFF files.")
+    parser = argparse.ArgumentParser(
+        description="Classify pixels in the input image using a model trained on the labels."
+    )
 
     parser.add_argument("-i", "--input", type=Path, help="Path to the input TIFF file")
     parser.add_argument("-lp", "--pos_labels", type=Path, help="Path to the positive training labels file, shp or gpkg")
@@ -197,8 +199,8 @@ def parse_args():
         "--feature_type",
         type=FeatureType.from_string,
         choices=list(FeatureType),
-        default=FeatureType.IDENTITY,
-        help='Type of feature being used. "Identity" means the raw input is directly used as features.',
+        default=FeatureType.FLAIR,
+        help=f"Type of feature being used. Default: {FeatureType.FLAIR.name}",
     )
     parser.add_argument(
         "-m",
