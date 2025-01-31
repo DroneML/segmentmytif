@@ -71,14 +71,9 @@ def get_features(
 
         # Create xarray DataArray with the extracted features
         # Keep the geospatial information from the input raster
-        features = xr.DataArray(
-            features_data,
-            dims=raster.dims,
-            coords={"band": range(features_data.shape[0]), "y": raster.y, "x": raster.x},
-        )
-        features = features.rio.write_crs(raster.rio.crs, inplace=True)
-        features = features.rio.write_transform(raster.rio.transform(), inplace=True)
-        features.attrs = raster.attrs
+
+        features = raster.isel(band=0).drop(["band"]).expand_dims(band=features_data.shape[0])
+        features.data = features_data
 
         # Save the features to disk
         msg = f"Saving {feature_type.name} features (shape {features_data.shape}) to {features_path}"

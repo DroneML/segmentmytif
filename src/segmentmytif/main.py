@@ -61,15 +61,11 @@ def read_input_and_labels_and_save_predictions(
     # Make predictions
     prediction_map = make_predictions(features.data, labels.data)
 
+    # Use raster as the template and assign data
+    prediction_raster = raster.isel(band=0).drop(["band"]).expand_dims(band=prediction_map.shape[0])
+    prediction_raster.data = prediction_map
+
     # Save predictions
-    prediction_raster = xr.DataArray(
-        prediction_map,
-        dims=raster.dims,
-        coords={"band": range(prediction_map.shape[0]), "y": raster.y, "x": raster.x},
-    )
-    prediction_raster = prediction_raster.rio.write_crs(raster.rio.crs, inplace=True)
-    prediction_raster = prediction_raster.rio.write_transform(raster.rio.transform(), inplace=True)
-    prediction_raster.attrs = raster.attrs
     prediction_raster.rio.to_raster(output_path)
 
     return output_path
