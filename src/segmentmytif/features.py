@@ -35,7 +35,7 @@ class FeatureType(Enum):
 
 def get_features(
     raster: xr.DataArray,
-    input_path: Path,
+    raster_path: Path,
     feature_type: FeatureType,
     features_path: Path,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
@@ -44,8 +44,8 @@ def get_features(
 ):
     """Extract features from the input data, or load them from disk if they have already been extracted.
 
-    :param input_data: 'Raw' input data as stored in TIFs by a GIS user. Shape: [n_bands, height, width]
-    :param input_path:
+    :param raster: raster data as xr.DataArray, read by rioxarray
+    :param raster_path: path to the raster tiff file
     :param feature_type: See FeatureType enum for options.
     :param features_path: Path used for caching features
     :param chunk_overlap: Overlap between chunks when chunk-wise processing is enanbled
@@ -56,7 +56,7 @@ def get_features(
         return raster
 
     if features_path is None:
-        features_path = get_features_path(input_path, feature_type)
+        features_path = get_features_path(raster_path, feature_type)
     if not features_path.exists():
         # Extract features
         msg = (
@@ -222,7 +222,7 @@ def get_flair_model_file_name(model_scale: float) -> str:
     return f"flair_toy_ep10_scale{scale}.pth"
 
 
-def get_features_path(input_path: Path, features_type: FeatureType) -> Path:
+def get_features_path(raster_path: Path, features_type: FeatureType) -> Path:
     if features_type == FeatureType.IDENTITY:
-        return input_path
-    return input_path.parent / f"{input_path.stem}_{features_type.name}{input_path.suffix}"
+        return raster_path
+    return raster_path.parent / f"{raster_path.stem}_{features_type.name}{raster_path.suffix}"
