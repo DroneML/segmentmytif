@@ -80,9 +80,12 @@ Repository = "https://github.com/DroneML/segmentmytif"
 Issues = "https://github.com/DroneML/segmentmytif/issues"
 ReadTheDocs = "https://segmentmytif.readthedocs.io"
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
 
+[tool.pytest.ini_options]
+addopts = "--cov --cov-report term"
+testpaths = [
+    "tests",
+]
 
 [tool.coverage.run]
 branch = true
