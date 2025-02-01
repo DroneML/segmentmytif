@@ -62,7 +62,7 @@ def read_input_and_labels_and_save_predictions(
     prediction_map = make_predictions(features.data, labels.data)
 
     # Use raster as the template and assign data
-    prediction_raster = raster.isel(band=0).drop(["band"]).expand_dims(band=prediction_map.shape[0])
+    prediction_raster = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=prediction_map.shape[0])
     prediction_raster.data = prediction_map
 
     # Save predictions

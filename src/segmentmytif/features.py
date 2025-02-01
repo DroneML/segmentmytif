@@ -72,7 +72,7 @@ def get_features(
         # Create xarray DataArray with the extracted features
         # Keep the geospatial information from the input raster
 
-        features = raster.isel(band=0).drop(["band"]).expand_dims(band=features_data.shape[0])
+        features = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=features_data.shape[0])
         features.data = features_data
 
         # Save the features to disk
