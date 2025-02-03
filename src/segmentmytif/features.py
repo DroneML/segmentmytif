@@ -58,27 +58,7 @@ def get_features(
     if features_path is None:
         features_path = get_features_path(raster_path, feature_type)
     if not features_path.exists():
-        # Extract features
-        msg = (
-            f"No existing {feature_type.name} features found at {features_path} "
-            f"for input data with shape {raster.data.shape}"
-        )
-        logger.info(msg)
-
-        with log_duration(f"Extracting {feature_type.name} features", logger):
-            features_data = extract_features(raster.data, feature_type, chunk_overlap, **extractor_kwargs)
-        log_array(features_data, logger, array_name=f"{feature_type.name} features")
-
-        # Create xarray DataArray with the extracted features
-        # Keep the geospatial information from the input raster
-
-        features = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=features_data.shape[0])
-        features.data = features_data
-
-        # Save the features to disk
-        msg = f"Saving {feature_type.name} features (shape {features_data.shape}) to {features_path}"
-        logger.info(msg)
-        features.rio.to_raster(features_path)
+        extract_and_save_features(raster, feature_type, chunk_overlap, features_path, extractor_kwargs)
 
     match compute_mode:
         case "normal":
@@ -95,6 +75,25 @@ def get_features(
     logger.info(msg)
 
     return loaded_features
+
+
+def extract_and_save_features(raster, feature_type, chunk_overlap, features_path, extractor_kwargs):
+    msg = (
+        f"No existing {feature_type.name} features found at {features_path} "
+        f"for input data with shape {raster.data.shape}"
+    )
+    logger.info(msg)
+    with log_duration(f"Extracting {feature_type.name} features", logger):
+        features_data = extract_features(raster.data, feature_type, chunk_overlap, **extractor_kwargs)
+    log_array(features_data, logger, array_name=f"{feature_type.name} features")
+    # Create xarray DataArray with the extracted features
+    # Keep the geospatial information from the input raster
+    features = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=features_data.shape[0])
+    features.data = features_data
+    # Save the features to disk
+    msg = f"Saving {feature_type.name} features (shape {features_data.shape}) to {features_path}"
+    logger.info(msg)
+    features.rio.to_raster(features_path)
 
 
 def extract_features(input_data, feature_type, chunk_overlap=16, **extractor_kwargs):
