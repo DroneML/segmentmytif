@@ -31,6 +31,8 @@ dependencies = [
     "torch",
     "torchvision",
     "torchinfo",
+    "geopandas",
+    "rioxarray",
     "huggingface_hub"
 ]
 description = "Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors."
@@ -78,9 +80,12 @@ Repository = "https://github.com/DroneML/segmentmytif"
 Issues = "https://github.com/DroneML/segmentmytif/issues"
 ReadTheDocs = "https://segmentmytif.readthedocs.io"
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
 
+[tool.pytest.ini_options]
+addopts = "--cov --cov-report term"
+testpaths = [
+    "tests",
+]
 
 [tool.coverage.run]
 branch = true
