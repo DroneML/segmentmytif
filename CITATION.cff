@@ -5,7 +5,9 @@ title: "segmentmytif"
 authors:
   - family-names: Meijer
     given-names: Christiaan
-    orcid: "https://orcid.org/0000-0000-0000-0000"
+    email: c.meijer@esciencecenter.nl
+    affiliation: Netherlands eScience Center
+    orcid: "https://orcid.org/0000-0002-5529-5761"
   - given-names: Ou
     family-names: Ku
     email: o.ku@esciencecenter.nl
