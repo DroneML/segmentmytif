@@ -6,6 +6,11 @@ authors:
   - family-names: Meijer
     given-names: Christiaan
     orcid: "https://orcid.org/0000-0000-0000-0000"
+  - given-names: Ou
+    family-names: Ku
+    email: o.ku@esciencecenter.nl
+    affiliation: Netherlands eScience Center
+    orcid: 'https://orcid.org/0000-0002-5373-5209'
 date-released: 2024-10-08
 version: "0.1.2"
 repository-code: "https://github.com/DroneML/segmentmytif"
