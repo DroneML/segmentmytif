@@ -30,7 +30,7 @@ jobs:
         with:
           name: artifact
           path: dist
-      - uses: pypa/gh-action-pypi-publish@v1.4.2
+      - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           user: __token__
           password: ${{ secrets.TEST_PYPI_TOKEN }}
@@ -45,7 +45,7 @@ jobs:
         with:
           name: artifact
           path: dist
-      - uses: pypa/gh-action-pypi-publish@v1.4.2
+      - uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           user: __token__
           password: ${{ secrets.PYPI_TOKEN }}
