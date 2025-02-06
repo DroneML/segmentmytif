@@ -31,6 +31,8 @@ dependencies = [
     "torch",
     "torchvision",
     "torchinfo",
+    "geopandas",
+    "rioxarray",
     "huggingface_hub"
 ]
 description = "Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors."
@@ -39,7 +41,7 @@ license = {file = "LICENSE"}
 name = "segmentmytif"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.8"
-version = "0.1.2"
+version = "0.2.0"
 
 [project.optional-dependencies]
 train = [
@@ -78,9 +80,12 @@ Repository = "https://github.com/DroneML/segmentmytif"
 Issues = "https://github.com/DroneML/segmentmytif/issues"
 ReadTheDocs = "https://segmentmytif.readthedocs.io"
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
 
+[tool.pytest.ini_options]
+addopts = "--cov --cov-report term"
+testpaths = [
+    "tests",
+]
 
 [tool.coverage.run]
 branch = true
@@ -139,7 +144,7 @@ force-single-line = true
 no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
 
 [tool.bumpversion]
-current_version = "0.1.2"
+current_version = "0.2.0"
 
 [[tool.bumpversion.files]]
 filename = "src/segmentmytif/__init__.py"

@@ -5,9 +5,16 @@ title: "segmentmytif"
 authors:
   - family-names: Meijer
     given-names: Christiaan
-    orcid: "https://orcid.org/0000-0000-0000-0000"
+    email: c.meijer@esciencecenter.nl
+    affiliation: Netherlands eScience Center
+    orcid: "https://orcid.org/0000-0002-5529-5761"
+  - given-names: Ou
+    family-names: Ku
+    email: o.ku@esciencecenter.nl
+    affiliation: Netherlands eScience Center
+    orcid: 'https://orcid.org/0000-0002-5373-5209'
 date-released: 2024-10-08
-version: "0.1.2"
+version: "0.2.0"
 repository-code: "https://github.com/DroneML/segmentmytif"
 keywords:
   - "Segmentation"
