@@ -3,23 +3,26 @@ from pathlib import Path
 
 import dask.array as da
 import numpy as np
+import pandas as pd
 import pytest
 import rasterio
+import rioxarray
+from scipy.spatial.distance import dice
 
 from segmentmytif.features import FeatureType, get_features_path
 from segmentmytif.main import read_input_and_labels_and_save_predictions, prepare_training_data
 from segmentmytif.utils.io import save_tiff
 from .utils import TEST_DATA_FOLDER
 
-
-@pytest.mark.parametrize("test_image, test_labels, feature_type",
+@pytest.mark.parametrize("test_image, test_labels, feature_type, model_scale, dice_similarity_threshold",
                          [
-                             ("test_image.tif", "test_image_labels.tif", FeatureType.IDENTITY),
-                             ("test_image.tif", "test_image_labels.tif", FeatureType.FLAIR),
-                             ("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.IDENTITY),
-                             ("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.FLAIR),
+                             pytest.param("test_image.tif", "test_image_labels.tif", FeatureType.IDENTITY, None, None, marks=pytest.mark.slow),
+                             pytest.param("test_image.tif", "test_image_labels.tif", FeatureType.FLAIR, 0.125, None), # also slow, but necessary to test on each run
+                             pytest.param("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.IDENTITY,None, 0.90, marks=pytest.mark.slow),
+                             pytest.param("test_image_512x512.tif", "test_image_labels_512x512.tif", FeatureType.FLAIR,0.125,  0.84, marks=pytest.mark.slow),
+                             pytest.param("test_image_512x512.tif", "test_image_labels_512x512.tif",  FeatureType.FLAIR,1.0, 0.98, marks=pytest.mark.slow),
                          ])
-def test_integration(tmpdir, test_image, test_labels, feature_type):
+def test_integration(tmpdir, test_image, test_labels, feature_type, model_scale, dice_similarity_threshold):
     input_path = copy_file_and_get_new_path(test_image, tmpdir)
     labels_path = copy_file_and_get_new_path(test_labels, tmpdir)
     predictions_path = Path(tmpdir) / f"{test_image}_predictions_{str(feature_type)}.tif"
@@ -27,9 +30,26 @@ def test_integration(tmpdir, test_image, test_labels, feature_type):
     read_input_and_labels_and_save_predictions(input_path, labels_path,
                                                predictions_path,
                                                feature_type=feature_type,
-                                               model_scale=0.125)  # scale down feature-extraction-model for testing
+                                               model_scale=model_scale)
 
     assert predictions_path.exists()
+
+    # Check DICE similarity if threshold is provided
+    if dice_similarity_threshold is None:
+        return
+
+    truth = rioxarray.open_rasterio(TEST_DATA_FOLDER / "test_image_512x512_out_ground_truth.tif").astype(np.int16)
+    predictions = rioxarray.open_rasterio(predictions_path).astype(np.int16)
+    dice_similarity = 1 - dice(truth.data.flatten(), predictions.data.flatten())
+    print(f"DICE similarity index: {dice_similarity}")
+    assert dice_similarity > dice_similarity_threshold
+
+
+def describe(array:np.ndarray, name):
+    print(pd.DataFrame(
+        [[name, str(array.shape), np.mean(array), np.min(array), np.max(array), array.dtype, np.mean(np.abs(array))]],
+        columns=["Name", "Shape", "Mean", "Min", "Max", "Dtype", "Mean Abs"]))
+    # print(pd.DataFrame(array[0,50:100,50:100]))
 
 
 def copy_file_and_get_new_path(test_image, tmpdir):

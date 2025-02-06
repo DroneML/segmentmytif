@@ -41,7 +41,7 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
     with log_duration("Prepare train data", logger):
         train_data, train_labels = prepare_training_data(input_data, labels)
 
-    classifier = RandomForestClassifier(n_estimators=100, random_state=0)
+    classifier = RandomForestClassifier(n_estimators=100)
 
     with log_duration("Train model", logger):
         classifier.fit(train_data, train_labels)
