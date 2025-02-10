@@ -27,7 +27,7 @@ from .utils import TEST_DATA_FOLDER
                              pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "safe", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "safe", marks=pytest.mark.slow),
 
-                         ])
+                         ], ids=lambda e : str(e))
 def test_integration(tmpdir, test_case: TestCase, feature_type, model_scale, dice_similarity_threshold, compute_mode):
     input_path = copy_file_and_get_new_path(test_case.image_filename, tmpdir)
     labels_pos_path = copy_file_and_get_new_path(test_case.labels_pos_filename, tmpdir)
