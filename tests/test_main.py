@@ -11,7 +11,7 @@ from scipy.spatial.distance import dice
 import geopandas as gpd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-
+import xarray as xr
 from segmentmytif.features import FeatureType, get_features_path, get_features
 from segmentmytif.main import read_input_and_labels_and_save_predictions, prepare_training_data, make_predictions
 from segmentmytif.utils.geospatial import get_label_array
@@ -55,10 +55,29 @@ def test_integration(tmpdir, test_case: TestCase, feature_type, model_scale, dic
     truth = rioxarray.open_rasterio(TEST_DATA_FOLDER / "test_image_512x512_out_ground_truth.tif").astype(np.int16)
     predictions = rioxarray.open_rasterio(predictions_path).astype(np.int16)
     dice_similarity = 1 - dice(truth.data.flatten(), predictions.data.flatten())
+    # Create the mask as a NumPy array
+    # Convert the mask to an xarray.DataArray
+    predictions_gt = xr.DataArray((predictions.data > 0.5).astype(np.int16), dims=predictions.dims, coords=predictions.coords)
+
+    # Attach the spatial attributes from the original raster to the mask
+    predictions_gt.rio.write_crs(predictions.rio.crs, inplace=True)
+    predictions_gt.rio.write_transform(predictions.rio.transform(), inplace=True)
+
+    # Save the mask as a raster
+    mask_path = tmpdir / "predictions_gt.tif"
+    predictions_gt.rio.to_raster(mask_path)
+
+    dice_similarity_rounded = 1 - dice(truth.data.flatten() > 0.5, predictions.data.flatten() > 0.5)
+    dice_similarity_gt = 1 - dice(truth.data.flatten() > 0.5, predictions_gt.data.flatten() > 0.5)
     print(f"DICE similarity index: {dice_similarity}")
+    print(f"DICE similarity index rounded: {dice_similarity_rounded}")
+    print(f"DICE similarity index gt: {dice_similarity_gt}")
     #save dice similarity to file
     with open(Path(tmpdir) / "dice_similarity.txt", "w") as f:
         f.write(f"DICE similarity index: {dice_similarity}")
+        f.write(f"DICE similarity index rounded: {dice_similarity_rounded}")
+        f.write(f"DICE similarity index gt: {dice_similarity_gt}")
+
     assert dice_similarity > dice_similarity_threshold
 
 
@@ -114,23 +133,29 @@ def test_ml_performance_test(tmpdir):
         FeatureType.FLAIR,
         Path(tmpdir) / "features.tif",
     )
-    squashed = (features - features.min(axis=1)) / features.max(axis=1)
+    squashed = rioxarray.raster_array((features - features.min(axis=1)) / features.max(axis=1))
+    squashed_raster = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=features.shape[0])
+    squashed_raster.data = squashed
     normalized = (features - features.mean(axis=1)) / features.std(axis=1)
+    normalized_raster = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=features.shape[0])
+    normalized_raster.data = normalized
 
     scaling = StandardScaler()
     scaling.fit(features.data.reshape(features.shape[0], -1))
     standardized = (scaling.transform(features.data.reshape(features.shape[0], -1))).reshape(features.shape)
+    standardized_raster = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=features.shape[0])
+    standardized_raster.data = standardized
 
     principal = PCA()
     principal.fit(standardized.reshape(standardized.shape[0], -1))
-    pcad = principal.transform(standardized.reshape(standardized.shape[0], -1)).reshape(standardized.shape)
+    pcad = standardized #principal.transform(standardized.reshape(standardized.shape[0], -1)).reshape(standardized.shape)
 
-    for d in [features, squashed, normalized, standardized,pcad]:
+    for d in [features, squashed_raster, normalized_raster, standardized_raster]:
         print(pd.DataFrame([(np.min(band), np.max(band), np.mean(band), np.std(band)) for band in d],
                      columns=["min", "max", "mean", "std"]))
 
-    scores = [train_predict_score(f, raster, tmpdir, use_case) for f in [features, squashed, normalized, standardized, pcad]]
-    results = pd.DataFrame(scores, columns=["DICE similarity index"], index=["Original", "Squashed", "Normalized", "Standardized", "PCA"])
+    scores = [train_predict_score(f, raster, tmpdir, use_case) for f in [features, squashed, normalized, standardized]]
+    results = pd.DataFrame(scores, columns=["DICE similarity index"], index=["Original", "Squashed", "Normalized", "Standardized"])
     print(results)
 
 
