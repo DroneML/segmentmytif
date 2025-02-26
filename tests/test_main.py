@@ -31,7 +31,6 @@ from .utils import TEST_DATA_FOLDER
                              # pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "parallel", marks=pytest.mark.slow),
                              # pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "safe", marks=pytest.mark.slow),
                              # pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "safe", marks=pytest.mark.slow),
-
                          ], ids=lambda e : str(e))
 def test_integration(tmpdir, test_case: TestCase, feature_type, model_scale, dice_similarity_threshold, compute_mode):
     tmpdir = TEST_DATA_FOLDER / "new_performance" / f"{test_case.image_filename}_{str(feature_type)}_model_{model_scale}"
@@ -53,11 +52,11 @@ def test_integration(tmpdir, test_case: TestCase, feature_type, model_scale, dic
         return
 
     truth = rioxarray.open_rasterio(TEST_DATA_FOLDER / "test_image_512x512_out_ground_truth.tif").astype(np.int16)
-    predictions = rioxarray.open_rasterio(predictions_path).astype(np.int16)
+    predictions = rioxarray.open_rasterio(predictions_path).astype(np.float64)
     dice_similarity = 1 - dice(truth.data.flatten(), predictions.data.flatten())
     # Create the mask as a NumPy array
     # Convert the mask to an xarray.DataArray
-    predictions_gt = xr.DataArray((predictions.data > 0.5).astype(np.int16), dims=predictions.dims, coords=predictions.coords)
+    predictions_gt = xr.DataArray((predictions.data > 0.999).astype(np.float64), dims=predictions.dims, coords=predictions.coords)
 
     # Attach the spatial attributes from the original raster to the mask
     predictions_gt.rio.write_crs(predictions.rio.crs, inplace=True)
