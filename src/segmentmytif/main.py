@@ -1,4 +1,5 @@
 import argparse
+from enum import Enum
 from pathlib import Path
 from typing import Literal
 
@@ -10,6 +11,10 @@ import geopandas as gpd
 import rioxarray
 import dask
 import xarray as xr
+from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
+from sklearn.svm import SVC
+from xgboost import XGBClassifier
 
 from segmentmytif.features import get_features, FeatureType, DEFAULT_CHUNK_OVERLAP
 from segmentmytif.logging_config import setup_logger, log_duration, log_array
@@ -82,7 +87,7 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
     with log_duration("Prepare train data", logger):
         train_data, train_labels = prepare_training_data(input_data, labels)
 
-    classifier = RandomForestClassifier(n_estimators=100)
+    classifier = get_classifier()
 
     with log_duration("Train model", logger):
         classifier.fit(train_data, train_labels)
@@ -93,6 +98,36 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
         log_array(prediction_map, logger, array_name="Predictions")
 
     return prediction_map
+
+class ClassifierType(Enum):
+    RANDOM_FOREST = 1
+    XGBOOST = 2
+    MLP = 3
+    SVM = 4
+    LOGISTIC_REGRESSION = 5
+
+
+    @staticmethod
+    def from_string(s):
+        try:
+            return ClassifierType[s]
+        except KeyError:
+            raise ValueError()
+
+def get_classifier(classifier_type = ClassifierType.RANDOM_FOREST):
+    logger.info(f"Using classifier: {classifier_type.name}")
+    if classifier_type == ClassifierType.RANDOM_FOREST:
+        return RandomForestClassifier(n_estimators=100)
+    if classifier_type == ClassifierType.XGBOOST:
+        return XGBClassifier(n_estimators=5000)
+    if classifier_type == ClassifierType.MLP:
+        return MLPClassifier()
+    if classifier_type == ClassifierType.SVM:
+        return SVC(probability=True)
+    if classifier_type == ClassifierType.LOGISTIC_REGRESSION:
+        return LogisticRegression()
+
+    raise ValueError(f"Invalid classifier type: {classifier_type}")
 
 
 def prepare_training_data(input_data, labels):
