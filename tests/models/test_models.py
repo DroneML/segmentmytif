@@ -58,6 +58,24 @@ class TestUNet:
 
         assert sum == expected_sum
 
+    def test_summary_model_scaled_up(self):
+        """Summary of up-scaled model is exactly as tested."""
+        model_scale = 2
+        in_channels = 3
+        num_classes = 19
+        width = height = 64
+        input_tensor = torch.randn(1, in_channels, width, height)  # Minimum size for U-Net to work
+        expected_sum = load_summary('test_model_summary_double.json')
+
+        model = UNet(in_channels, num_classes, model_scale=model_scale)
+        sum = get_summary(model, input_tensor)
+
+        # print(sum)
+
+
+
+        assert sum == expected_sum
+
 
 def load_summary(file_name):
     expected_sum = (TEST_DATA_FOLDER / file_name).read_text(encoding='utf-8')
