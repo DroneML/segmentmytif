@@ -22,19 +22,18 @@ from .utils import TEST_DATA_FOLDER
 
 @pytest.mark.parametrize("test_case, feature_type, model_scale, dice_similarity_threshold, compute_mode",
                          [
-                             # pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "normal", marks=pytest.mark.slow),
-                             # pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "normal"), # also slow, but necessary to test on each run
+                             pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "normal", marks=pytest.mark.slow),
+                             pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "normal"), # also slow, but necessary to test on each run
                              pytest.param(test_case512, FeatureType.IDENTITY, None, 0.90, "normal", marks=pytest.mark.slow),
                              pytest.param(test_case512, FeatureType.FLAIR, 0.125, 0.84, "normal", marks=pytest.mark.slow),
                              pytest.param(test_case512, FeatureType.FLAIR, 1.0, 0.98, "normal", marks=pytest.mark.slow),
-                             # pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "parallel", marks=pytest.mark.slow),
-                             # pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "parallel", marks=pytest.mark.slow),
-                             # pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "safe", marks=pytest.mark.slow),
-                             # pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "safe", marks=pytest.mark.slow),
+                             pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "parallel", marks=pytest.mark.slow),
+                             pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "parallel", marks=pytest.mark.slow),
+                             pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "safe", marks=pytest.mark.slow),
+                             pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "safe", marks=pytest.mark.slow),
                          ], ids=lambda e : str(e))
 def test_integration(tmpdir, test_case: TestCase, feature_type, model_scale, dice_similarity_threshold, compute_mode):
-    tmpdir = TEST_DATA_FOLDER / "new_performance" / f"{test_case.image_filename}_{str(feature_type)}_model_{model_scale}"
-    tmpdir.mkdir(exist_ok=True, parents=True)
+    tmpdir = Path(tmpdir)
 
     input_path = copy_file_and_get_new_path(test_case.image_filename, tmpdir)
     labels_pos_path = copy_file_and_get_new_path(test_case.labels_pos_filename, tmpdir)
