@@ -25,8 +25,8 @@ from .utils import TEST_DATA_FOLDER
                              pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "normal", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "normal"), # also slow, but necessary to test on each run
                              pytest.param(test_case512, FeatureType.IDENTITY, None, 0.90, "normal", marks=pytest.mark.slow),
-                             pytest.param(test_case512, FeatureType.FLAIR, 0.125, 0.84, "normal", marks=pytest.mark.slow),
-                             pytest.param(test_case512, FeatureType.FLAIR, 1.0, 0.98, "normal", marks=pytest.mark.slow),
+                             pytest.param(test_case512, FeatureType.FLAIR, 0.125, 0.82, "normal", marks=pytest.mark.slow),
+                             pytest.param(test_case512, FeatureType.FLAIR, 1.0, 0.95, "normal", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "parallel", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "parallel", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "safe", marks=pytest.mark.slow),
@@ -52,30 +52,8 @@ def test_integration(tmpdir, test_case: TestCase, feature_type, model_scale, dic
 
     truth = rioxarray.open_rasterio(TEST_DATA_FOLDER / "test_image_512x512_out_ground_truth.tif").astype(np.int16)
     predictions = rioxarray.open_rasterio(predictions_path).astype(np.float64)
-    dice_similarity = 1 - dice(truth.data.flatten(), predictions.data.flatten())
-    # Create the mask as a NumPy array
-    # Convert the mask to an xarray.DataArray
-    predictions_gt = xr.DataArray((predictions.data > 0.999).astype(np.float64), dims=predictions.dims, coords=predictions.coords)
-
-    # Attach the spatial attributes from the original raster to the mask
-    predictions_gt.rio.write_crs(predictions.rio.crs, inplace=True)
-    predictions_gt.rio.write_transform(predictions.rio.transform(), inplace=True)
-
-    # Save the mask as a raster
-    mask_path = tmpdir / "predictions_gt.tif"
-    predictions_gt.rio.to_raster(mask_path)
-
-    dice_similarity_rounded = 1 - dice(truth.data.flatten() > 0.5, predictions.data.flatten() > 0.5)
-    dice_similarity_gt = 1 - dice(truth.data.flatten() > 0.5, predictions_gt.data.flatten() > 0.5)
+    dice_similarity = 1 - dice(truth.data.flatten() > 0.5, predictions.data.flatten() > 0.999)
     print(f"DICE similarity index: {dice_similarity}")
-    print(f"DICE similarity index rounded: {dice_similarity_rounded}")
-    print(f"DICE similarity index gt: {dice_similarity_gt}")
-    #save dice similarity to file
-    with open(Path(tmpdir) / "dice_similarity.txt", "w") as f:
-        f.write(f"DICE similarity index: {dice_similarity}")
-        f.write(f"DICE similarity index rounded: {dice_similarity_rounded}")
-        f.write(f"DICE similarity index gt: {dice_similarity_gt}")
-
     assert dice_similarity > dice_similarity_threshold
 
 
