@@ -17,7 +17,9 @@ from segmentmytif.logging_config import setup_logger, log_duration, log_array
 from segmentmytif.utils.io import read_geotiff, save_tiff
 from segmentmytif.utils.geospatial import get_label_array
 
-logger = setup_logger(__name__)
+logger = logging.getLogger(__name__)
+if not logger.handlers:
+    logger = setup_logger(__name__)
 
 
 def read_input_and_labels_and_save_predictions(
