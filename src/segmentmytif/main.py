@@ -10,6 +10,7 @@ import geopandas as gpd
 import rioxarray
 import dask
 import xarray as xr
+import logging
 
 from segmentmytif.features import get_features, FeatureType, DEFAULT_CHUNK_OVERLAP
 from segmentmytif.logging_config import setup_logger, log_duration, log_array
@@ -29,8 +30,15 @@ def read_input_and_labels_and_save_predictions(
     compute_mode: Literal["normal", "parallel", "safe"] = "normal",
     chunks: dict = None,
     chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
+    logger_root: logging.Logger = None,
     **extractor_kwargs,
 ) -> None:
+    # Hijack the global logger if a logger_root is provided
+    # This is designed to be used in QGIS environment
+    if logger_root is not None:
+        global logger
+        logger = logger_root
+
     logger.info("read_input_and_labels_and_save_predictions called with the following arguments:")
     for k, v in locals().items():
         logger.info(f"{k}: {v}")
