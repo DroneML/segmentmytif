@@ -1,12 +1,15 @@
 import pytest
 import numpy as np
+import pytest
+import torch
+
 from segmentmytif.features import (
     get_features,
     extract_features,
     FeatureType,
     NUM_FLAIR_CLASSES,
     get_flair_model_file_name,
-    load_model,
+    load_model, pad, calculate_pad_sizes_1d, unpad,
 )
 
 
@@ -66,3 +69,59 @@ def test_get_flair_model_file_name_with_invalid_scales(model_scale):
 @pytest.mark.parametrize(["model_scale"], [(0.125,), (0.25,), (0.5,), (1.0,)])
 def test_load_model_downloads_model_from_hugging_face(model_scale, tmpdir):
     load_model(model_scale, models_dir=tmpdir)
+
+
+
+def test_pad():
+    """Test padding of input band to ensure dimensions are divisible by 16."""
+    input_band = torch.tensor(np.array([[1, 2, 3], [4, 5, 6]])[None, None, :, :], dtype=torch.float32)
+    expected_output = torch.tensor(
+        np.array([
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 4, 5, 6, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ])[None, None, :, :], dtype=torch.float32
+    )
+
+    padded_band = pad(input_band, band_name="test_band")
+
+    assert torch.equal(padded_band, expected_output)
+
+
+@pytest.mark.parametrize(["input_size"], [((1, 1, 1, 2),), ((1, 1, 17, 23),), ((1, 1, 123, 196),)])
+def test_pad_unpad(input_size):
+    rng = np.random.default_rng(0)
+    input_band = torch.tensor(rng.random(input_size), dtype=torch.float32)
+
+    padded_band = pad(input_band, band_name=f"{input_size}")
+    unpadded_band = unpad(padded_band, input_size)
+
+    assert torch.equal(input_band, unpadded_band)
+
+
+@pytest.mark.parametrize("dim_size, expected_pad_sizes", [
+    (1, (7, 8)),
+    (4, (6, 6)),
+    (15, (0, 1)),
+    (16, (0, 0)),
+    (17, (7, 8)),
+    (31, (0, 1)),
+    (32, (0, 0))
+])
+def test_calculate_pad_size_1d(dim_size, expected_pad_sizes):
+    """Test calculation of padding sizes to make a dimension size divisible by 16."""
+    pad_sizes = calculate_pad_sizes_1d(dim_size)
+    assert pad_sizes == expected_pad_sizes

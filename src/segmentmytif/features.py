@@ -154,8 +154,8 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
     for i_band in range(n_bands):
         input_band = torch.from_numpy(input_data[None, i_band : i_band + 1, :, :]).float().to(device)
         padded_input = pad(input_band, band_name=i_band)
-        padded_current_predictions = model(padded_input).detach().numpy()
-        current_predictions = padded_current_predictions[:, :, : input_band.shape[2], : input_band.shape[3]]  # unpad
+        padded_current_predictions = model(padded_input)
+        current_predictions = unpad(padded_current_predictions, input_band.shape).detach().numpy()
         outputs.append(current_predictions)
     output = np.concatenate(outputs, axis=1)
     return output[0, :, :, :]
@@ -185,10 +185,11 @@ def load_model(model_scale:float, models_dir: Path = Path("models")):
     return model, device
 
 
-def pad(input_band, band_name):
+def pad(input_band: torch.Tensor, band_name):
     """
     Pad the input band, single-sided at the end of width and height axis, to make its dimensions divisible by 16.
     :param input_band: Input band to pad
+    :param band_name: Name of the band (for logging)
     :return: Padded input
     """
     width = input_band.shape[2]
@@ -196,16 +197,54 @@ def pad(input_band, band_name):
     if width % 16 == 0 and height % 16 == 0:
         padded = input_band
     else:
-        pad_width = 16 - width % 16
-        pad_height = 16 - height % 16
-        padded = torch.nn.functional.pad(input_band, (0, pad_height, 0, pad_width))
+        pad_left, pad_right = calculate_pad_sizes_1d(width)
+        pad_top, pad_bottom = calculate_pad_sizes_1d(height)
+
+        padded = torch.nn.functional.pad(input_band, (pad_top, pad_bottom, pad_left, pad_right))
         logger.info(
             f"Added temporary padding for band {band_name}: (original {height} x {width})"
-            f" -> (padded {height + pad_height} x {width + pad_width})"
+            f" -> (padded {pad_top + height + pad_bottom} x {pad_left + width + pad_right})"
         )
 
     return padded
 
+
+def calculate_pad_sizes_1d(dim_size: int)->tuple[int, int]:
+    """"
+    Calculate the padding sizes needed to make a dimension size divisible by 16.
+
+    This function computes the amount of padding required before and after the given dimension size
+    to make it divisible by 16. The padding is added symmetrically.
+
+    Parameters:
+    dim_size (int): The original size of the dimension to be padded.
+
+    Returns:
+    tuple[int, int]: A tuple containing the padding size before and after the dimension.
+    """
+    total_pad = 15 - (dim_size - 1) % 16
+    pad_before = total_pad // 2
+    pad_after = total_pad - pad_before
+    return pad_before, pad_after
+
+
+def unpad(padded_band:torch.Tensor, original_size):
+    """
+    Remove padding from the input band to restore its original size.
+
+    This function removes the padding added to the input band to make its dimensions divisible by 16.
+
+    Parameters:
+    padded_band (torch.Tensor): The padded input band tensor.
+    original_size (tuple[int, int]): The original size of the input band (height, width).
+
+    Returns:
+    torch.Tensor: The unpadded input band tensor.
+    """
+    _,_, original_height, original_width = original_size
+    pad_top, pad_bottom = calculate_pad_sizes_1d(original_height)
+    pad_left, pad_right = calculate_pad_sizes_1d(original_width)
+    return padded_band[:, :, pad_top:pad_top + original_height, pad_left:pad_left + original_width]
 
 def get_flair_model_file_name(model_scale: float) -> str:
     scale_mapping = {1.0: "1_0", 0.5: "0_5", 0.25: "0_25", 0.125: "0_125"}
