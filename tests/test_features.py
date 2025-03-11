@@ -48,10 +48,10 @@ def get_generated_multiband_image(n_bands=3, width=512, height=512):
 @pytest.mark.parametrize(
     ["model_scale", "file_name"],
     [
-        (1.0, "flair_toy_ep10_scale1_0.pth"),
-        (0.5, "flair_toy_ep10_scale0_5.pth"),
-        (0.25, "flair_toy_ep10_scale0_25.pth"),
-        (0.125, "flair_toy_ep10_scale0_125.pth"),
+        (1.0, "flair_toy_ep15_scale1_0.pth"),
+        (0.5, "flair_toy_ep15_scale0_5.pth"),
+        (0.25, "flair_toy_ep15_scale0_25.pth"),
+        (0.125, "flair_toy_ep15_scale0_125.pth"),
     ],
 )
 def test_get_flair_model_file_name_with_valid_scales(model_scale, file_name):
