@@ -1,12 +1,15 @@
 import logging
 from pathlib import Path
 
-from PIL import Image
-from torch.utils.data import Dataset
-from torchvision import transforms
 import numpy as np
 import torch
+from PIL import Image
+from torch.utils.data import Dataset
 
+from segmentmytif.logging_config import setup_logger
+from segmentmytif.utils.io import read_geotiff
+
+logger = setup_logger(__name__)
 
 class MonochromeFlairDataset(Dataset):
     def __init__(self, root_path, limit=None, split="train"):
@@ -26,12 +29,22 @@ class MonochromeFlairDataset(Dataset):
             self.limit = len(self.images)
 
     def __getitem__(self, index):
-        img = transforms.ToTensor()(Image.open(self.images[index]).convert("L"))
+        img_arr = read_geotiff(self.images[index]).data
+        img = normalize_single_band_to_tensor(img_arr[0], debug_note=f"path: {self.images[index]}")[None, :, :]
         mask = load_and_one_hot_encode(self.masks[index])
         return img, mask
 
     def __len__(self):
         return min(len(self.images), self.limit)
+
+def normalize_single_band_to_tensor(img_arr: np.ndarray, debug_note="") -> torch.Tensor:
+    std = img_arr.std()
+    if std == 0:
+        msg = "Standard deviation = 0 " + debug_note
+        logger.debug(msg)
+        std = 1
+    normalized = (img_arr - img_arr.mean()) / std
+    return torch.from_numpy(normalized)
 
 
 def load_and_one_hot_encode(image_path, num_classes=19):

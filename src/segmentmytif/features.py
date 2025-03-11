@@ -3,17 +3,18 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal
 
-from dask.array.core import Array
 import dask.array as da
-import xarray as xr
 import numpy as np
-import torch
 import rioxarray
+import torch
+import xarray as xr
+from dask.array.core import Array
 from huggingface_hub import hf_hub_download
+from torchvision.models.feature_extraction import create_feature_extractor
 from numpy import ndarray
 
 from segmentmytif.logging_config import log_duration, log_array
-from segmentmytif.utils.io import save_tiff, read_geotiff
+from segmentmytif.utils.datasets import normalize_single_band_to_tensor
 from segmentmytif.utils.models import UNet
 
 NUM_FLAIR_CLASSES = 19
@@ -23,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 class FeatureType(Enum):
     IDENTITY = 1
-    FLAIR = 2
+    FLAIR_CLASSES = 2
+    FLAIR_FEATURES = 3
 
     @staticmethod
     def from_string(s):
@@ -98,7 +100,8 @@ def extract_and_save_features(raster, feature_type, chunk_overlap, features_path
 
 def extract_features(input_data, feature_type, chunk_overlap=16, **extractor_kwargs):
     extractor = {
-        FeatureType.FLAIR: extract_flair_features,
+        FeatureType.FLAIR_CLASSES: extract_flair_classes_features,
+        FeatureType.FLAIR_FEATURES: extract_flair_features,
     }[feature_type]
 
     # If dask array, map feature extraction function to each block
@@ -106,7 +109,7 @@ def extract_features(input_data, feature_type, chunk_overlap=16, **extractor_kwa
     # FeatureType.IDENTITY directly returns the input data, thus no need to map_overlap
     if isinstance(input_data, Array):
         # Make template dask array according to the extractor
-        if feature_type == FeatureType.FLAIR:
+        if feature_type == FeatureType.FLAIR_CLASSES:
             # If FLAIR, output features has bands * NUM_FLAIR_CLASSES
             meta = da.zeros_like(
                 input_data,
@@ -139,6 +142,28 @@ def extract_identity_features(input_data: ndarray) -> ndarray:
     return input_data
 
 
+def extract_flair_classes_features(input_data: ndarray, model_scale=1.0) -> ndarray:
+    """
+
+    :param input_data: Array-like input data as stored in TIFs. Shape: [n_bands, height, width]
+    :param model_scale: Scale of the model to use. Must be one of [1.0, 0.5, 0.25, 0.125]
+    :return: Features extracted from the input data
+    """
+    logger.info(f"Using UNet at scale {model_scale}")
+    model, device = load_classification_model(model_scale)
+    n_bands = input_data.shape[0]
+
+    outputs = []
+    for i_band in range(n_bands):
+        input_band = normalize_single_band_to_tensor(input_data[i_band:i_band + 1, :, :])[None, :, :, :].float().to(
+            device)
+        padded_input = pad(input_band, band_name=i_band)
+        padded_current_predictions = model(padded_input)
+        current_predictions = unpad(padded_current_predictions, input_band.shape).detach().numpy()
+        outputs.append(current_predictions)
+    output = np.concatenate(outputs, axis=1)
+    return output[0, :, :, :]
+
 def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
     """
 
@@ -147,22 +172,26 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
     :return: Features extracted from the input data
     """
     logger.info(f"Using UNet at scale {model_scale}")
-    model, device = load_model(model_scale)
+    classification_model, device = load_classification_model(model_scale)
+    return_nodes = {
+        "up_convolution_4": "up_convolution_4",
+    }
+    feature_extractor_model = create_feature_extractor(classification_model, return_nodes=return_nodes)
     n_bands = input_data.shape[0]
 
     outputs = []
     for i_band in range(n_bands):
-        input_band = torch.from_numpy(input_data[None, i_band : i_band + 1, :, :]).float().to(device)
+        input_band = normalize_single_band_to_tensor(input_data[i_band:i_band + 1, :, :])[None, :, :, :].float().to(
+            device)
         padded_input = pad(input_band, band_name=i_band)
-        padded_current_predictions = model(padded_input).detach().numpy()
-        current_predictions = padded_current_predictions[:, :, : input_band.shape[2], : input_band.shape[3]]  # unpad
+        padded_current_predictions = feature_extractor_model(padded_input)['up_convolution_4']
+        current_predictions = unpad(padded_current_predictions, input_band.shape).detach().numpy()
         outputs.append(current_predictions)
     output = np.concatenate(outputs, axis=1)
     return output[0, :, :, :]
 
 
-
-def load_model(model_scale:float, models_dir: Path = Path("models")):
+def load_classification_model(model_scale:float, models_dir: Path = Path("models")):
     """
     Load the model from disk and return it along with the device it's loaded on to.
     :param model_scale: Scale of the model to use. Must be one of [1.0, 0.5, 0.25, 0.125]
@@ -185,10 +214,11 @@ def load_model(model_scale:float, models_dir: Path = Path("models")):
     return model, device
 
 
-def pad(input_band, band_name):
+def pad(input_band: torch.Tensor, band_name):
     """
     Pad the input band, single-sided at the end of width and height axis, to make its dimensions divisible by 16.
     :param input_band: Input band to pad
+    :param band_name: Name of the band (for logging)
     :return: Padded input
     """
     width = input_band.shape[2]
@@ -196,16 +226,54 @@ def pad(input_band, band_name):
     if width % 16 == 0 and height % 16 == 0:
         padded = input_band
     else:
-        pad_width = 16 - width % 16
-        pad_height = 16 - height % 16
-        padded = torch.nn.functional.pad(input_band, (0, pad_height, 0, pad_width))
+        pad_left, pad_right = calculate_pad_sizes_1d(width)
+        pad_top, pad_bottom = calculate_pad_sizes_1d(height)
+
+        padded = torch.nn.functional.pad(input_band, (pad_top, pad_bottom, pad_left, pad_right))
         logger.info(
             f"Added temporary padding for band {band_name}: (original {height} x {width})"
-            f" -> (padded {height + pad_height} x {width + pad_width})"
+            f" -> (padded {pad_top + height + pad_bottom} x {pad_left + width + pad_right})"
         )
 
     return padded
 
+
+def calculate_pad_sizes_1d(dim_size: int)->tuple[int, int]:
+    """"
+    Calculate the padding sizes needed to make a dimension size divisible by 16.
+
+    This function computes the amount of padding required before and after the given dimension size
+    to make it divisible by 16. The padding is added symmetrically.
+
+    Parameters:
+    dim_size (int): The original size of the dimension to be padded.
+
+    Returns:
+    tuple[int, int]: A tuple containing the padding size before and after the dimension.
+    """
+    total_pad = 15 - (dim_size - 1) % 16
+    pad_before = total_pad // 2
+    pad_after = total_pad - pad_before
+    return pad_before, pad_after
+
+
+def unpad(padded_band:torch.Tensor, original_size):
+    """
+    Remove padding from the input band to restore its original size.
+
+    This function removes the padding added to the input band to make its dimensions divisible by 16.
+
+    Parameters:
+    padded_band (torch.Tensor): The padded input band tensor.
+    original_size (tuple[int, int]): The original size of the input band (height, width).
+
+    Returns:
+    torch.Tensor: The unpadded input band tensor.
+    """
+    _,_, original_height, original_width = original_size
+    pad_top, pad_bottom = calculate_pad_sizes_1d(original_height)
+    pad_left, pad_right = calculate_pad_sizes_1d(original_width)
+    return padded_band[:, :, pad_top:pad_top + original_height, pad_left:pad_left + original_width]
 
 def get_flair_model_file_name(model_scale: float) -> str:
     scale_mapping = {1.0: "1_0", 0.5: "0_5", 0.25: "0_25", 0.125: "0_125"}
@@ -218,7 +286,7 @@ def get_flair_model_file_name(model_scale: float) -> str:
     if scale is None:
         raise ValueError(f"Unsupported model scale selected ({model_scale}), choose from {scale_mapping.keys()}")
 
-    return f"flair_toy_ep10_scale{scale}.pth"
+    return f"flair_toy_ep15_scale{scale}.pth"
 
 
 def get_features_path(raster_path: Path, features_type: FeatureType) -> Path:
