@@ -54,6 +54,9 @@ def test_integration(tmpdir, test_case: TestCase, feature_type, model_scale, dic
     predictions = rioxarray.open_rasterio(predictions_path).astype(np.float64)
     dice_similarity = 1 - dice(truth.data.flatten() > 0.5, predictions.data.flatten() > 0.999)
     print(f"DICE similarity index: {dice_similarity}")
+    for t in range(0,100):
+        dice_similarity = 1 - dice(truth.data.flatten() > 0.5, predictions.data.flatten() > t/100)
+        print(f"DICE similarity index ({t/100}): {dice_similarity}")
     assert dice_similarity > dice_similarity_threshold
 
 

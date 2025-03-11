@@ -44,7 +44,7 @@ def read_input_and_labels_and_save_predictions(
     dask_kwargs = _set_compute_mode(compute_mode, chunks)
 
     # Load raster data
-    raster = rioxarray.open_rasterio(raster_path, **dask_kwargs)
+    raster = read_geotiff(raster_path)
 
     features = get_features(
         raster,

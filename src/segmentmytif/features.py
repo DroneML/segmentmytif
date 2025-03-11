@@ -3,17 +3,17 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal
 
-from dask.array.core import Array
 import dask.array as da
-import xarray as xr
 import numpy as np
-import torch
 import rioxarray
+import torch
+import xarray as xr
+from dask.array.core import Array
 from huggingface_hub import hf_hub_download
 from numpy import ndarray
 
 from segmentmytif.logging_config import log_duration, log_array
-from segmentmytif.utils.io import save_tiff, read_geotiff
+from segmentmytif.utils.datasets import normalize_single_band_to_tensor
 from segmentmytif.utils.models import UNet
 
 NUM_FLAIR_CLASSES = 19
@@ -152,14 +152,14 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
 
     outputs = []
     for i_band in range(n_bands):
-        input_band = torch.from_numpy(input_data[None, i_band : i_band + 1, :, :]).float().to(device)
+        input_band = normalize_single_band_to_tensor(input_data[i_band:i_band + 1, :, :])[None, :, :, :].float().to(
+            device)
         padded_input = pad(input_band, band_name=i_band)
         padded_current_predictions = model(padded_input)
         current_predictions = unpad(padded_current_predictions, input_band.shape).detach().numpy()
         outputs.append(current_predictions)
     output = np.concatenate(outputs, axis=1)
     return output[0, :, :, :]
-
 
 
 def load_model(model_scale:float, models_dir: Path = Path("models")):
@@ -257,7 +257,7 @@ def get_flair_model_file_name(model_scale: float) -> str:
     if scale is None:
         raise ValueError(f"Unsupported model scale selected ({model_scale}), choose from {scale_mapping.keys()}")
 
-    return f"flair_toy_ep10_scale{scale}.pth"
+    return f"flair_toy_ep15_scale{scale}.pth"
 
 
 def get_features_path(raster_path: Path, features_type: FeatureType) -> Path:
