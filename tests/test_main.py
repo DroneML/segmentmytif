@@ -23,14 +23,16 @@ from .utils import TEST_DATA_FOLDER
 @pytest.mark.parametrize("test_case, feature_type, model_scale, dice_similarity_threshold, compute_mode",
                          [
                              pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "normal", marks=pytest.mark.slow),
-                             pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "normal"), # also slow, but necessary to test on each run
+                             pytest.param(test_case1210, FeatureType.FLAIR_CLASSES, 0.125, None, "normal"), # also slow, but necessary to test on each run
                              pytest.param(test_case512, FeatureType.IDENTITY, None, 0.90, "normal", marks=pytest.mark.slow),
-                             pytest.param(test_case512, FeatureType.FLAIR, 0.125, 0.82, "normal", marks=pytest.mark.slow),
-                             pytest.param(test_case512, FeatureType.FLAIR, 1.0, 0.95, "normal", marks=pytest.mark.slow),
+                             pytest.param(test_case512, FeatureType.FLAIR_CLASSES, 0.125, 0.82, "normal", marks=pytest.mark.slow),
+                             pytest.param(test_case512, FeatureType.FLAIR_CLASSES, 1.0, 0.95, "normal", marks=pytest.mark.slow),
+                             pytest.param(test_case512, FeatureType.FLAIR_FEATURES, 1.0, 0.95, "normal", marks=pytest.mark.slow),
+                             pytest.param(test_case512, FeatureType.FLAIR_FEATURES, 1.0, 0.95, "parallel", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "parallel", marks=pytest.mark.slow),
-                             pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "parallel", marks=pytest.mark.slow),
+                             pytest.param(test_case1210, FeatureType.FLAIR_CLASSES, 0.125, None, "parallel", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "safe", marks=pytest.mark.slow),
-                             pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "safe", marks=pytest.mark.slow),
+                             pytest.param(test_case1210, FeatureType.FLAIR_CLASSES, 0.125, None, "safe", marks=pytest.mark.slow),
                          ], ids=lambda e : str(e))
 def test_integration(tmpdir, test_case: TestCase, feature_type, model_scale, dice_similarity_threshold, compute_mode):
     tmpdir = Path(tmpdir)
@@ -69,8 +71,8 @@ def copy_file_and_get_new_path(test_image, tmpdir):
 @pytest.mark.parametrize(
     "input_path, feature_type, expected_path",
     [
-        ("input.tiff", FeatureType.FLAIR, "input_FLAIR.tiff"),
-        ("../path/to/input.tiff", FeatureType.FLAIR, "../path/to/input_FLAIR.tiff"),
+        ("input.tiff", FeatureType.FLAIR_CLASSES, "input_FLAIR.tiff"),
+        ("../path/to/input.tiff", FeatureType.FLAIR_CLASSES, "../path/to/input_FLAIR.tiff"),
         ("../path/to/input.tiff", FeatureType.IDENTITY, "../path/to/input.tiff"),
     ],
 )
@@ -109,7 +111,7 @@ def test_ml_performance_test(tmpdir):
     features = get_features(
         raster,
         TEST_DATA_FOLDER / use_case.image_filename,
-        FeatureType.FLAIR,
+        FeatureType.FLAIR_CLASSES,
         Path(tmpdir) / "features.tif",
     )
     squashed = rioxarray.raster_array((features - features.min(axis=1)) / features.max(axis=1))

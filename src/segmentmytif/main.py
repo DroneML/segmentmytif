@@ -234,8 +234,8 @@ def parse_args():
         "--feature_type",
         type=FeatureType.from_string,
         choices=list(FeatureType),
-        default=FeatureType.FLAIR,
-        help=f"Type of feature being used. Default: {FeatureType.FLAIR.name}",
+        default=FeatureType.FLAIR_CLASSES,
+        help=f"Type of feature being used. Default: {FeatureType.FLAIR_CLASSES.name}",
     )
     parser.add_argument(
         "-m",

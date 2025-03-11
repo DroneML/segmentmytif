@@ -8,7 +8,7 @@ from segmentmytif.features import (
     FeatureType,
     NUM_FLAIR_CLASSES,
     get_flair_model_file_name,
-    load_model, pad, calculate_pad_sizes_1d, unpad,
+    load_classification_model, pad, calculate_pad_sizes_1d, unpad,
 )
 
 
@@ -32,7 +32,7 @@ class TestExtractFeatures:
     )
     def test_extract_flair_features(self, n_bands, width, height):
         input_data = np.array(get_generated_multiband_image(n_bands=n_bands, width=width, height=height))
-        result = extract_features(input_data, FeatureType.FLAIR, model_scale=0.125)
+        result = extract_features(input_data, FeatureType.FLAIR_CLASSES, model_scale=0.125)
         assert np.array_equal(result.shape, [n_bands * NUM_FLAIR_CLASSES] + list(input_data.shape[1:]))
 
     def test_extract_features_unsupported_type(self):
@@ -67,7 +67,7 @@ def test_get_flair_model_file_name_with_invalid_scales(model_scale):
 @pytest.mark.downloader
 @pytest.mark.parametrize(["model_scale"], [(0.125,), (0.25,), (0.5,), (1.0,)])
 def test_load_model_downloads_model_from_hugging_face(model_scale, tmpdir):
-    load_model(model_scale, models_dir=tmpdir)
+    load_classification_model(model_scale, models_dir=tmpdir)
 
 
 

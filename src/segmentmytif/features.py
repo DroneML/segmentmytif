@@ -10,6 +10,7 @@ import torch
 import xarray as xr
 from dask.array.core import Array
 from huggingface_hub import hf_hub_download
+from torchvision.models.feature_extraction import create_feature_extractor
 from numpy import ndarray
 
 from segmentmytif.logging_config import log_duration, log_array
@@ -23,7 +24,8 @@ logger = logging.getLogger(__name__)
 
 class FeatureType(Enum):
     IDENTITY = 1
-    FLAIR = 2
+    FLAIR_CLASSES = 2
+    FLAIR_FEATURES = 3
 
     @staticmethod
     def from_string(s):
@@ -98,7 +100,8 @@ def extract_and_save_features(raster, feature_type, chunk_overlap, features_path
 
 def extract_features(input_data, feature_type, chunk_overlap=16, **extractor_kwargs):
     extractor = {
-        FeatureType.FLAIR: extract_flair_features,
+        FeatureType.FLAIR_CLASSES: extract_flair_classes_features,
+        FeatureType.FLAIR_FEATURES: extract_flair_features,
     }[feature_type]
 
     # If dask array, map feature extraction function to each block
@@ -106,7 +109,7 @@ def extract_features(input_data, feature_type, chunk_overlap=16, **extractor_kwa
     # FeatureType.IDENTITY directly returns the input data, thus no need to map_overlap
     if isinstance(input_data, Array):
         # Make template dask array according to the extractor
-        if feature_type == FeatureType.FLAIR:
+        if feature_type == FeatureType.FLAIR_CLASSES:
             # If FLAIR, output features has bands * NUM_FLAIR_CLASSES
             meta = da.zeros_like(
                 input_data,
@@ -139,7 +142,7 @@ def extract_identity_features(input_data: ndarray) -> ndarray:
     return input_data
 
 
-def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
+def extract_flair_classes_features(input_data: ndarray, model_scale=1.0) -> ndarray:
     """
 
     :param input_data: Array-like input data as stored in TIFs. Shape: [n_bands, height, width]
@@ -147,7 +150,7 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
     :return: Features extracted from the input data
     """
     logger.info(f"Using UNet at scale {model_scale}")
-    model, device = load_model(model_scale)
+    model, device = load_classification_model(model_scale)
     n_bands = input_data.shape[0]
 
     outputs = []
@@ -161,8 +164,34 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
     output = np.concatenate(outputs, axis=1)
     return output[0, :, :, :]
 
+def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
+    """
 
-def load_model(model_scale:float, models_dir: Path = Path("models")):
+    :param input_data: Array-like input data as stored in TIFs. Shape: [n_bands, height, width]
+    :param model_scale: Scale of the model to use. Must be one of [1.0, 0.5, 0.25, 0.125]
+    :return: Features extracted from the input data
+    """
+    logger.info(f"Using UNet at scale {model_scale}")
+    classification_model, device = load_classification_model(model_scale)
+    return_nodes = {
+        "up_convolution_4": "up_convolution_4",
+    }
+    feature_extractor_model = create_feature_extractor(classification_model, return_nodes=return_nodes)
+    n_bands = input_data.shape[0]
+
+    outputs = []
+    for i_band in range(n_bands):
+        input_band = normalize_single_band_to_tensor(input_data[i_band:i_band + 1, :, :])[None, :, :, :].float().to(
+            device)
+        padded_input = pad(input_band, band_name=i_band)
+        padded_current_predictions = feature_extractor_model(padded_input)['up_convolution_4']
+        current_predictions = unpad(padded_current_predictions, input_band.shape).detach().numpy()
+        outputs.append(current_predictions)
+    output = np.concatenate(outputs, axis=1)
+    return output[0, :, :, :]
+
+
+def load_classification_model(model_scale:float, models_dir: Path = Path("models")):
     """
     Load the model from disk and return it along with the device it's loaded on to.
     :param model_scale: Scale of the model to use. Must be one of [1.0, 0.5, 0.25, 0.125]
