@@ -87,6 +87,10 @@ addopts = "--cov --cov-report term"
 testpaths = [
     "tests",
 ]
+markers = [
+    "downloader: marks tests that download data from the internet",
+    "slow: marks tests that are slow",
+]
 
 [tool.coverage.run]
 branch = true

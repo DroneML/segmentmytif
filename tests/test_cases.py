@@ -4,6 +4,7 @@ from typing import Optional
 
 @dataclass
 class TestCase:
+    __test__ = False  # This is to prevent pytest from running this class as a test case
     image_filename: str
     labels_pos_filename: str
     labels_neg_filename: str
