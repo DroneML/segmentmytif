@@ -71,7 +71,7 @@ jobs:
         run: python -m build
 
   build_slow:
-    name: Build (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Build slow tests (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
