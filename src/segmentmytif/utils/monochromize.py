@@ -22,7 +22,6 @@ def parse_args():
 
 def monochromize_image(input_file_path: Path, output_folder_path: Path):
     data = read_geotiff(input_file_path)
-    profile['count'] = 1  # Number of bands
     for i_channel in range(data.shape[0]):
         output_file_name = f"{input_file_path.stem}_{i_channel}{input_file_path.suffix}"
         channel = data[i_channel:i_channel + 1]

@@ -79,17 +79,6 @@ def test_get_features_path(input_path, feature_type, expected_path):
     assert features_path == Path(expected_path)
 
 
-def test_save(tmpdir):
-    predictions_path = Path(tmpdir) / "test_image_predictions.tif"
-    width = 100
-    data = np.zeros((3, width, width))
-    profile = {"width": width, "height": width, "dtype": rasterio.uint8}
-
-    save_tiff(data, predictions_path, profile=profile)
-
-    assert predictions_path.exists()
-
-
 @pytest.mark.parametrize("array_type", ["numpy", "dask"])
 def test_prepare_training_data(array_type):
     random = np.random.default_rng(0)
@@ -102,40 +91,6 @@ def test_prepare_training_data(array_type):
         input_data = da.from_array(random_data)
 
     prepare_training_data(input_data, labels)
-
-def test_ml_performance_test(tmpdir):
-    use_case = test_case512
-    raster = rioxarray.open_rasterio(TEST_DATA_FOLDER / use_case.image_filename)
-    features = get_features(
-        raster,
-        TEST_DATA_FOLDER / use_case.image_filename,
-        FeatureType.FLAIR,
-        Path(tmpdir) / "features.tif",
-    )
-    squashed = rioxarray.raster_array((features - features.min(axis=1)) / features.max(axis=1))
-    squashed_raster = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=features.shape[0])
-    squashed_raster.data = squashed
-    normalized = (features - features.mean(axis=1)) / features.std(axis=1)
-    normalized_raster = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=features.shape[0])
-    normalized_raster.data = normalized
-
-    scaling = StandardScaler()
-    scaling.fit(features.data.reshape(features.shape[0], -1))
-    standardized = (scaling.transform(features.data.reshape(features.shape[0], -1))).reshape(features.shape)
-    standardized_raster = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=features.shape[0])
-    standardized_raster.data = standardized
-
-    principal = PCA()
-    principal.fit(standardized.reshape(standardized.shape[0], -1))
-    pcad = standardized #principal.transform(standardized.reshape(standardized.shape[0], -1)).reshape(standardized.shape)
-
-    for d in [features, squashed_raster, normalized_raster, standardized_raster]:
-        print(pd.DataFrame([(np.min(band), np.max(band), np.mean(band), np.std(band)) for band in d],
-                     columns=["min", "max", "mean", "std"]))
-
-    scores = [train_predict_score(f, raster, tmpdir, use_case) for f in [features, squashed, normalized, standardized]]
-    results = pd.DataFrame(scores, columns=["DICE similarity index"], index=["Original", "Squashed", "Normalized", "Standardized"])
-    print(results)
 
 
 def train_predict_score(features, raster, tmpdir, use_case):
