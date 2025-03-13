@@ -27,6 +27,8 @@ from .utils import TEST_DATA_FOLDER
                              pytest.param(test_case512, FeatureType.IDENTITY, None, 0.90, "normal", marks=pytest.mark.slow),
                              pytest.param(test_case512, FeatureType.FLAIR, 0.125, 0.82, "normal", marks=pytest.mark.slow),
                              pytest.param(test_case512, FeatureType.FLAIR, 1.0, 0.95, "normal", marks=pytest.mark.slow),
+                             pytest.param(test_case512, FeatureType.FLAIR, 1.0, 0.95, "parallel", marks=pytest.mark.slow),
+                             pytest.param(test_case512, FeatureType.FLAIR, 1.0, 0.95, "safe", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "parallel", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.FLAIR, 0.125, None, "parallel", marks=pytest.mark.slow),
                              pytest.param(test_case1210, FeatureType.IDENTITY, None, None, "safe", marks=pytest.mark.slow),
