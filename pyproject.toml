@@ -35,6 +35,7 @@ dependencies = [
     "rioxarray",
     "huggingface_hub",
     "xgboost",
+    "wget",
 ]
 description = "Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors."
 keywords = ["Segmentation"," UNet"," Active learning"," Drone"," Raster data"," Spatial data"]
