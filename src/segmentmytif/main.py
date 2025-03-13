@@ -5,13 +5,14 @@ from typing import Literal
 import numpy as np
 import dask.array as da
 from numpy import ndarray
+from rasterio.enums import Resampling
 from sklearn.ensemble import RandomForestClassifier
 import geopandas as gpd
 import rioxarray
 import dask
 import xarray as xr
 
-from segmentmytif.features import get_features, FeatureType, DEFAULT_CHUNK_OVERLAP
+from segmentmytif.features import get_features, FeatureType, DEFAULT_CHUNK_OVERLAP, resample
 from segmentmytif.logging_config import setup_logger, log_duration, log_array
 from segmentmytif.utils.io import read_geotiff, save_tiff
 from segmentmytif.utils.geospatial import get_label_array
@@ -74,19 +75,18 @@ def read_input_and_labels_and_save_predictions(
     labels = get_label_array(features, pos_gdf, neg_gdf, compute_mode=compute_mode)
 
     # Make predictions
-    prediction_map = make_predictions(features.data, labels.data)
+    prediction_map = make_predictions(features, labels)
 
     # Use raster as the template and assign data
     prediction_raster = raster.isel(band=0).drop_vars(["band"]).expand_dims(band=prediction_map.shape[0])
-    prediction_raster.data = prediction_map
+    resampled = resample(prediction_raster)
+    resampled.data = prediction_map
 
     # Save predictions
-    prediction_raster.rio.to_raster(output_path)
-
-    return output_path
+    resampled.rio.to_raster(output_path)
 
 
-def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
+def make_predictions(input_data, labels) -> ndarray:
     """Makes predictions by training a classifier and using it for inference.
 
     Expects input data with shape of [channels, width, height] and labels of shape [classes, width, height]
@@ -95,16 +95,18 @@ def make_predictions(input_data: ndarray, labels: ndarray) -> ndarray:
     :return: probabilities with shape [class_values, width, height]
     """
     with log_duration("Prepare train data", logger):
-        train_data, train_labels = prepare_training_data(input_data, labels)
+        train_data, train_labels = prepare_training_data(input_data.data, labels.data)
 
     classifier = RandomForestClassifier(n_estimators=100, random_state=0)
 
     with log_duration("Train model", logger):
         classifier.fit(train_data, train_labels)
 
+    resampled_features = resample(input_data)
+
     with log_duration("Make predictions", logger):
-        predictions = classifier.predict_proba(input_data.reshape((input_data.shape[0], -1)).transpose())
-        prediction_map = predictions.transpose().reshape((predictions.shape[1], *input_data.shape[1:]))
+        predictions = classifier.predict_proba(resampled_features.data.reshape((resampled_features.data.shape[0], -1)).transpose())
+        prediction_map = predictions.transpose().reshape((predictions.shape[1], *resampled_features.data.shape[1:]))
         log_array(prediction_map, logger, array_name="Predictions")
 
     return prediction_map
@@ -252,11 +254,13 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
     input_path = args.input
-    pos_labels_path = args.pos_labels
-    neg_labels_path = args.neg_labels
-    predictions_path = args.predictions
-    feature_type = args.feature_type
-
     read_input_and_labels_and_save_predictions(
-        input_path, pos_labels_path, neg_labels_path, predictions_path, feature_type=feature_type
+        input_path,
+        args.pos_labels,
+        args.neg_labels,
+        args.predictions,
+        feature_type=args.feature_type,
+        compute_mode=args.compute_mode,
+        chunks=args.chunks,
+        chunk_overlap=args.chunk_overlap
     )

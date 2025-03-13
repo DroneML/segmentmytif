@@ -11,6 +11,7 @@ import torch
 import rioxarray
 from huggingface_hub import hf_hub_download
 from numpy import ndarray
+from rasterio.enums import Resampling
 
 from segmentmytif.logging_config import log_duration, log_array
 from segmentmytif.utils.io import save_tiff, read_geotiff
@@ -71,10 +72,20 @@ def get_features(
                 "y": raster.chunksizes["y"][0],
             }
             loaded_features = rioxarray.open_rasterio(features_path, chunks=chunks)
-    msg = f"Loading {feature_type.name} features (shape {loaded_features.shape}) from {features_path}"
-    logger.info(msg)
+    logger.info(f"Loaded {feature_type.name} features (shape {loaded_features.shape}) from {features_path}")
 
     return loaded_features
+
+
+def resample(raster_data, scale =1):
+    new_width = int(round(raster_data.rio.width * scale))
+    new_height = int(round(raster_data.rio.height * scale))
+    raster_data = raster_data.rio.reproject(
+        raster_data.rio.crs,
+        shape=(new_height, new_width),
+        resampling=Resampling.bilinear,
+    )
+    return raster_data
 
 
 def extract_and_save_features(raster, feature_type, chunk_overlap, features_path, extractor_kwargs):
