@@ -7,6 +7,7 @@ import dask.array as da
 import numpy as np
 import rioxarray
 import torch
+import wget
 import xarray as xr
 from dask.array.core import Array
 from huggingface_hub import hf_hub_download
@@ -162,11 +163,13 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
     return output[0, :, :, :]
 
 
-def load_model(model_scale:float, models_dir: Path = Path("models")):
+def load_model(model_scale: float, models_dir: Path = Path("models"), sources: tuple[str] = None) -> tuple[
+    UNet, torch.device]:
     """
     Load the model from disk and return it along with the device it's loaded on to.
     :param model_scale: Scale of the model to use. Must be one of [1.0, 0.5, 0.25, 0.125]
     :param models_dir: Path to the directory containing the model files
+    :param sources: for testing purposes, specify the sources to download the model from
     :return: Torch model and the device it's loaded on to
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -175,8 +178,27 @@ def load_model(model_scale:float, models_dir: Path = Path("models")):
     model_path = models_dir / file_name
 
     if not model_path.exists():
-        logger.info(f"Model not found at '{model_path}', downloading from Hugging Face")
-        hf_hub_download(repo_id="DroneML/FLAIR-feature-extractor", filename=file_name, local_dir=models_dir)
+        sources = ["Huggingface", "Surfdrive"] if sources is None else sources
+        for s in sources:
+            if s == "Huggingface":
+                try:
+                    logger.info(f"Model not found at '{model_path}', downloading from Huggingface")
+                    hf_hub_download(repo_id="DroneML/FLAIR-feature-extractor", filename=file_name, local_dir=models_dir)
+                except Exception as e:
+                    logger.error(f"Failed to download model from Huggingface: {e}")
+            if s == "Surfdrive":
+                try:
+                    logger.info(f"Model not found at '{model_path}', downloading from Surfdrive")
+                    surfdrive_file_id = {"flair_toy_ep10_scale1_0.pth": "JzDbL9KWWj5BmtR",
+                           "flair_toy_ep15_scale1_0.pth": "zFuHOf3FQBcDzWE"}[file_name]
+                    url = f"https://surfdrive.surf.nl/files/index.php/s/{surfdrive_file_id}/download"
+                    wget.download(url, out=str(model_path))
+                except Exception as e:
+                    logger.error(f"Failed to download model from Surfdrive: {e}")
+                    raise e
+            if model_path.exists():
+                logger.info(f"Model successfully downloaded from {s}")
+                break
 
     state = torch.load(model_path, map_location=device, weights_only=True)
 

@@ -10,6 +10,7 @@ from segmentmytif.features import (
     get_flair_model_file_name,
     load_model, pad, calculate_pad_sizes_1d, unpad,
 )
+from segmentmytif.utils.models import UNet
 
 
 class TestExtractFeatures:
@@ -65,9 +66,19 @@ def test_get_flair_model_file_name_with_invalid_scales(model_scale):
 
 
 @pytest.mark.downloader
-@pytest.mark.parametrize(["model_scale"], [(0.125,), (0.25,), (0.5,), (1.0,)])
-def test_load_model_downloads_model_from_hugging_face(model_scale, tmpdir):
-    load_model(model_scale, models_dir=tmpdir)
+@pytest.mark.parametrize(["model_scale", "source"], [
+    (0.125, "Huggingface"),
+    (0.25, "Huggingface"),
+    (0.5, "Huggingface"),
+    (1.0, "Huggingface"),
+    (1.0, "Surfdrive"),
+    (1.0, None),
+])
+def test_load_model_downloads(model_scale, source, tmpdir):
+    sources = (source,) if source is not None else None
+    model, device = load_model(model_scale, models_dir=tmpdir, sources=sources)
+    assert model is not None
+    assert type(model) == UNet
 
 
 
