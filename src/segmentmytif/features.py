@@ -3,17 +3,18 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal
 
-from dask.array.core import Array
 import dask.array as da
-import xarray as xr
 import numpy as np
-import torch
 import rioxarray
+import torch
+import wget
+import xarray as xr
+from dask.array.core import Array
 from huggingface_hub import hf_hub_download
 from numpy import ndarray
 
 from segmentmytif.logging_config import log_duration, log_array
-from segmentmytif.utils.io import save_tiff, read_geotiff
+from segmentmytif.utils.datasets import normalize_single_band_to_tensor
 from segmentmytif.utils.models import UNet
 
 NUM_FLAIR_CLASSES = 19
@@ -152,21 +153,23 @@ def extract_flair_features(input_data: ndarray, model_scale=1.0) -> ndarray:
 
     outputs = []
     for i_band in range(n_bands):
-        input_band = torch.from_numpy(input_data[None, i_band : i_band + 1, :, :]).float().to(device)
+        input_band = normalize_single_band_to_tensor(input_data[i_band:i_band + 1, :, :])[None, :, :, :].float().to(
+            device)
         padded_input = pad(input_band, band_name=i_band)
-        padded_current_predictions = model(padded_input).detach().numpy()
-        current_predictions = padded_current_predictions[:, :, : input_band.shape[2], : input_band.shape[3]]  # unpad
+        padded_current_predictions = model(padded_input)
+        current_predictions = unpad(padded_current_predictions, input_band.shape).detach().numpy()
         outputs.append(current_predictions)
     output = np.concatenate(outputs, axis=1)
     return output[0, :, :, :]
 
 
-
-def load_model(model_scale:float, models_dir: Path = Path("models")):
+def load_model(model_scale: float, models_dir: Path = Path("models"), sources: tuple[str] = None) -> tuple[
+    UNet, torch.device]:
     """
     Load the model from disk and return it along with the device it's loaded on to.
     :param model_scale: Scale of the model to use. Must be one of [1.0, 0.5, 0.25, 0.125]
     :param models_dir: Path to the directory containing the model files
+    :param sources: for testing purposes, specify the sources to download the model from
     :return: Torch model and the device it's loaded on to
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -175,8 +178,27 @@ def load_model(model_scale:float, models_dir: Path = Path("models")):
     model_path = models_dir / file_name
 
     if not model_path.exists():
-        logger.info(f"Model not found at '{model_path}', downloading from Hugging Face")
-        hf_hub_download(repo_id="DroneML/FLAIR-feature-extractor", filename=file_name, local_dir=models_dir)
+        sources = ["Huggingface", "Surfdrive"] if sources is None else sources
+        for s in sources:
+            if s == "Huggingface":
+                try:
+                    logger.info(f"Model not found at '{model_path}', downloading from Huggingface")
+                    hf_hub_download(repo_id="DroneML/FLAIR-feature-extractor", filename=file_name, local_dir=models_dir)
+                except Exception as e:
+                    logger.error(f"Failed to download model from Huggingface: {e}")
+            if s == "Surfdrive":
+                try:
+                    logger.info(f"Model not found at '{model_path}', downloading from Surfdrive")
+                    surfdrive_file_id = {"flair_toy_ep10_scale1_0.pth": "JzDbL9KWWj5BmtR",
+                           "flair_toy_ep15_scale1_0.pth": "zFuHOf3FQBcDzWE"}[file_name]
+                    url = f"https://surfdrive.surf.nl/files/index.php/s/{surfdrive_file_id}/download"
+                    wget.download(url, out=str(model_path))
+                except Exception as e:
+                    logger.error(f"Failed to download model from Surfdrive: {e}")
+                    raise e
+            if model_path.exists():
+                logger.info(f"Model successfully downloaded from {s}")
+                break
 
     state = torch.load(model_path, map_location=device, weights_only=True)
 
@@ -185,10 +207,11 @@ def load_model(model_scale:float, models_dir: Path = Path("models")):
     return model, device
 
 
-def pad(input_band, band_name):
+def pad(input_band: torch.Tensor, band_name):
     """
     Pad the input band, single-sided at the end of width and height axis, to make its dimensions divisible by 16.
     :param input_band: Input band to pad
+    :param band_name: Name of the band (for logging)
     :return: Padded input
     """
     width = input_band.shape[2]
@@ -196,16 +219,54 @@ def pad(input_band, band_name):
     if width % 16 == 0 and height % 16 == 0:
         padded = input_band
     else:
-        pad_width = 16 - width % 16
-        pad_height = 16 - height % 16
-        padded = torch.nn.functional.pad(input_band, (0, pad_height, 0, pad_width))
+        pad_left, pad_right = calculate_pad_sizes_1d(width)
+        pad_top, pad_bottom = calculate_pad_sizes_1d(height)
+
+        padded = torch.nn.functional.pad(input_band, (pad_top, pad_bottom, pad_left, pad_right))
         logger.info(
             f"Added temporary padding for band {band_name}: (original {height} x {width})"
-            f" -> (padded {height + pad_height} x {width + pad_width})"
+            f" -> (padded {pad_top + height + pad_bottom} x {pad_left + width + pad_right})"
         )
 
     return padded
 
+
+def calculate_pad_sizes_1d(dim_size: int)->tuple[int, int]:
+    """"
+    Calculate the padding sizes needed to make a dimension size divisible by 16.
+
+    This function computes the amount of padding required before and after the given dimension size
+    to make it divisible by 16. The padding is added symmetrically.
+
+    Parameters:
+    dim_size (int): The original size of the dimension to be padded.
+
+    Returns:
+    tuple[int, int]: A tuple containing the padding size before and after the dimension.
+    """
+    total_pad = 15 - (dim_size - 1) % 16
+    pad_before = total_pad // 2
+    pad_after = total_pad - pad_before
+    return pad_before, pad_after
+
+
+def unpad(padded_band:torch.Tensor, original_size):
+    """
+    Remove padding from the input band to restore its original size.
+
+    This function removes the padding added to the input band to make its dimensions divisible by 16.
+
+    Parameters:
+    padded_band (torch.Tensor): The padded input band tensor.
+    original_size (tuple[int, int]): The original size of the input band (height, width).
+
+    Returns:
+    torch.Tensor: The unpadded input band tensor.
+    """
+    _,_, original_height, original_width = original_size
+    pad_top, pad_bottom = calculate_pad_sizes_1d(original_height)
+    pad_left, pad_right = calculate_pad_sizes_1d(original_width)
+    return padded_band[:, :, pad_top:pad_top + original_height, pad_left:pad_left + original_width]
 
 def get_flair_model_file_name(model_scale: float) -> str:
     scale_mapping = {1.0: "1_0", 0.5: "0_5", 0.25: "0_25", 0.125: "0_125"}
@@ -218,7 +279,7 @@ def get_flair_model_file_name(model_scale: float) -> str:
     if scale is None:
         raise ValueError(f"Unsupported model scale selected ({model_scale}), choose from {scale_mapping.keys()}")
 
-    return f"flair_toy_ep10_scale{scale}.pth"
+    return f"flair_toy_ep15_scale{scale}.pth"
 
 
 def get_features_path(raster_path: Path, features_type: FeatureType) -> Path:

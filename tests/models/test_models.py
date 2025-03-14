@@ -1,9 +1,8 @@
-import json
-from pathlib import Path
-
+import numpy as np
 import torch
 from torchinfo import summary
 
+from segmentmytif.utils.datasets import normalize_single_band_to_tensor
 from segmentmytif.utils.models import UNet
 from tests.utils import TEST_DATA_FOLDER
 
@@ -58,6 +57,20 @@ class TestUNet:
 
         assert sum == expected_sum
 
+    def test_summary_model_scaled_up(self):
+        """Summary of up-scaled model is exactly as tested."""
+        model_scale = 2
+        in_channels = 3
+        num_classes = 19
+        width = height = 64
+        input_tensor = torch.randn(1, in_channels, width, height)  # Minimum size for U-Net to work
+        expected_sum = load_summary('test_model_summary_double.json')
+
+        model = UNet(in_channels, num_classes, model_scale=model_scale)
+        sum = get_summary(model, input_tensor)
+
+        assert sum == expected_sum
+
 
 def load_summary(file_name):
     expected_sum = (TEST_DATA_FOLDER / file_name).read_text(encoding='utf-8')
@@ -74,3 +87,44 @@ def normalize_model_summary(text):
             .replace("(G)", "(Units.GIGABYTES)")
             .replace("(M)", "(Units.MEGABYTES)")
             )
+
+
+def test_normalize_single_band_to_tensor_uint8_array():
+    """Test normalization with a regular array having non-zero mean and std."""
+    # Regular array with non-zero mean and std
+    test_array = np.random.randint(0, 255, (100, 100), dtype=np.uint8)
+
+    normalized = normalize_single_band_to_tensor(test_array)
+
+    expected_shape = test_array.shape
+    verify_normalized_ouput(normalized, expected_shape)
+
+
+def test_normalize_single_band_to_tensor_regular_array():
+    """Test normalization with a regular array having non-zero mean and std."""
+    # Regular array with non-zero mean and std
+    test_array = np.random.rand(100, 100) * 10 + 5  # Values between 5 and 15
+
+    normalized = normalize_single_band_to_tensor(test_array)
+
+    expected_shape = test_array.shape
+    verify_normalized_ouput(normalized, expected_shape)
+
+
+def verify_normalized_ouput(normalized, expected_shape, expected_std=1.0):
+    # Check that the output is a torch tensor with correct dimensions
+    assert isinstance(normalized, torch.Tensor)
+    assert normalized.shape == expected_shape
+    # Check normalization (should have mean ~0 and std ~1)
+    normalized_numpy = normalized.numpy()
+    assert abs(normalized_numpy.mean()) < 1e-6  # Close to zero
+    assert abs(normalized_numpy.std() - expected_std) < 1e-6  # Close to one
+
+
+def test_normalize_single_band_to_tensor_zero_std_array():
+    """Test normalization with an array having zero standard deviation."""
+    # Array with zero standard deviation
+    zero_std_array = np.ones((50, 50)) * 7  # All values are 7
+    zero_std_normalized = normalize_single_band_to_tensor(zero_std_array, debug_note="zero std test")
+
+    verify_normalized_ouput(zero_std_normalized, zero_std_array.shape, expected_std=0.0)

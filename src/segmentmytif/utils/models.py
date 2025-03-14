@@ -1,3 +1,5 @@
+from typing import Union
+
 import torch
 from torch import nn
 
@@ -40,24 +42,27 @@ class UpSample(nn.Module):
         x = torch.cat([x1, x2], 1)
         return self.conv(x)
 
+def multiply_to_int(a:Union[int, float], b:Union[int, float]) -> int:
+    return int(round(a*b))
 
 class UNet(nn.Module):
     def __init__(self, in_channels, num_classes, model_scale=1):
         super().__init__()
-        denominator = int(round(1 / model_scale))
-        self.down_convolution_1 = DownSample(in_channels, 64//denominator)
-        self.down_convolution_2 = DownSample(64//denominator, 128//denominator)
-        self.down_convolution_3 = DownSample(128//denominator, 256//denominator)
-        self.down_convolution_4 = DownSample(256//denominator, 512//denominator)
+        self.down_convolution_1 = DownSample(in_channels, multiply_to_int(64, model_scale))
+        self.down_convolution_2 = DownSample(multiply_to_int(64, model_scale), multiply_to_int(128, model_scale))
+        self.down_convolution_3 = DownSample(multiply_to_int(128, model_scale), multiply_to_int(256, model_scale))
+        self.down_convolution_4 = DownSample(multiply_to_int(256, model_scale), multiply_to_int(512, model_scale))
 
-        self.bottle_neck = DoubleConv(512//denominator, 1024//denominator)
+        self.bottle_neck = DoubleConv(multiply_to_int(512, model_scale), multiply_to_int(1024, model_scale))
 
-        self.up_convolution_1 = UpSample(1024//denominator, 512//denominator)
-        self.up_convolution_2 = UpSample(512//denominator, 256//denominator)
-        self.up_convolution_3 = UpSample(256//denominator, 128//denominator)
-        self.up_convolution_4 = UpSample(128//denominator, 64//denominator)
+        self.up_convolution_1 = UpSample(multiply_to_int(1024, model_scale), multiply_to_int(512, model_scale))
+        self.up_convolution_2 = UpSample(multiply_to_int(512, model_scale), multiply_to_int(256, model_scale))
+        self.up_convolution_3 = UpSample(multiply_to_int(256, model_scale), multiply_to_int(128, model_scale))
+        self.up_convolution_4 = UpSample(multiply_to_int(128, model_scale), multiply_to_int(64, model_scale))
 
-        self.out = nn.Conv2d(in_channels=64//denominator, out_channels=num_classes, kernel_size=1)
+        self.out = nn.Conv2d(in_channels=multiply_to_int(64, model_scale), out_channels=num_classes, kernel_size=1)
+
+
 
     def forward(self, x):
         down_1, p1 = self.down_convolution_1(x)
