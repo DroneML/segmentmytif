@@ -46,6 +46,21 @@ def read_input_and_labels_and_save_predictions(
     # Load raster data
     raster = read_geotiff(raster_path)
 
+    # Ensure the raster has correct crs
+    # In QGIS environment, rasterio may not be able to read the crs correctly
+    # However, osgeo.gdal, which is in QGIS, can read the crs correctly
+    # Therefore, we use osgeo.gdal to read the crs, when osgeo is available
+    try:
+        from osgeo import gdal
+
+        dataset = gdal.Open(raster_path)
+        projection = dataset.GetProjection()
+        raster = raster.rio.write_crs(projection, inplace=True)
+        logger.info("Used osgeo.gdal to read the crs")
+    except ImportError:
+        logger.info("Used rioxarray to read the crs")
+
+    # Extract features
     features = get_features(
         raster,
         raster_path,
