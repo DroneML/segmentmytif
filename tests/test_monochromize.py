@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from segmentmytif.utils.monochromize import monochromize_image, monochromize_folder
+from pycoeus.utils.monochromize import monochromize_image, monochromize_folder
 from .test_cases import test_case1210
 from .utils import TEST_DATA_FOLDER
 

@@ -1,4 +1,4 @@
-# `segmentmytif` developer documentation
+# `pycoeus` developer documentation
 
 If you're looking for user documentation, go [here](../README.md).
 
@@ -15,7 +15,7 @@ source env/bin/activate
 python -m pip install --upgrade pip setuptools
 
 # (from the project root directory)
-# install segmentmytif as an editable package
+# install pycoeus as an editable package
 python -m pip install --no-cache-dir --editable .
 # install development dependencies
 python -m pip install --no-cache-dir --editable .[dev]
@@ -35,7 +35,7 @@ The first way requires an activated virtual environment with the development too
 pytest -v
 ```
 
-The second is to use `tox`, which can be installed separately (e.g. with `pip install tox`), i.e. not necessarily inside the virtual environment you use for installing `segmentmytif`, but then builds the necessary virtual environments itself by simply running:
+The second is to use `tox`, which can be installed separately (e.g. with `pip install tox`), i.e. not necessarily inside the virtual environment you use for installing `pycoeus`, but then builds the necessary virtual environments itself by simply running:
 
 ```shell
 tox
@@ -131,7 +131,7 @@ This section describes how to make a release in 3 parts:
 
 ### (2/3) GitHub
 
-Make a [release on GitHub](https://github.com/DroneML/segmentmytif/releases/new).GitHub-Zenodo integration will also trigger Zenodo into making a snapshot of your repository and sticking a DOI on it.
+Make a [release on GitHub](https://github.com/DroneML/pycoeus/releases/new).GitHub-Zenodo integration will also trigger Zenodo into making a snapshot of your repository and sticking a DOI on it.
 
 ### (3/3) PyPI
 

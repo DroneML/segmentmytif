@@ -6,8 +6,8 @@ import torch
 from PIL import Image
 from torch.utils.data import Dataset
 
-from segmentmytif.logging_config import setup_logger
-from segmentmytif.utils.io import read_geotiff
+from pycoeus.logging_config import setup_logger
+from pycoeus.utils.io import read_geotiff
 
 logger = setup_logger(__name__)
 

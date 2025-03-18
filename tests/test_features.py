@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import torch
 
-from segmentmytif.features import (
+from pycoeus.features import (
     get_features,
     extract_features,
     FeatureType,
@@ -10,7 +10,7 @@ from segmentmytif.features import (
     get_flair_model_file_name,
     load_model, pad, calculate_pad_sizes_1d, unpad,
 )
-from segmentmytif.utils.models import UNet
+from pycoeus.utils.models import UNet
 
 
 class TestExtractFeatures:

@@ -17,10 +17,10 @@ from sklearn.svm import SVC
 from xgboost import XGBClassifier
 import logging
 
-from segmentmytif.features import get_features, FeatureType, DEFAULT_CHUNK_OVERLAP
-from segmentmytif.logging_config import setup_logger, log_duration, log_array
-from segmentmytif.utils.io import read_geotiff, save_tiff
-from segmentmytif.utils.geospatial import get_label_array
+from pycoeus.features import get_features, FeatureType, DEFAULT_CHUNK_OVERLAP
+from pycoeus.logging_config import setup_logger, log_duration, log_array
+from pycoeus.utils.io import read_geotiff, save_tiff
+from pycoeus.utils.geospatial import get_label_array
 
 logger = logging.getLogger(__name__)
 if not logger.handlers:

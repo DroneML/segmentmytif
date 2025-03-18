@@ -12,10 +12,10 @@ import geopandas as gpd
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 import xarray as xr
-from segmentmytif.features import FeatureType, get_features_path, get_features
-from segmentmytif.main import read_input_and_labels_and_save_predictions, prepare_training_data, make_predictions
-from segmentmytif.utils.geospatial import get_label_array
-from segmentmytif.utils.io import save_tiff
+from pycoeus.features import FeatureType, get_features_path, get_features
+from pycoeus.main import read_input_and_labels_and_save_predictions, prepare_training_data, make_predictions
+from pycoeus.utils.geospatial import get_label_array
+from pycoeus.utils.io import save_tiff
 from .test_cases import TestCase, test_case1210, test_case512
 from .utils import TEST_DATA_FOLDER
 

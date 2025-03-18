@@ -13,9 +13,9 @@ from dask.array.core import Array
 from huggingface_hub import hf_hub_download
 from numpy import ndarray
 
-from segmentmytif.logging_config import log_duration, log_array
-from segmentmytif.utils.datasets import normalize_single_band_to_tensor
-from segmentmytif.utils.models import UNet
+from pycoeus.logging_config import log_duration, log_array
+from pycoeus.utils.datasets import normalize_single_band_to_tensor
+from pycoeus.utils.models import UNet
 
 NUM_FLAIR_CLASSES = 19
 DEFAULT_CHUNK_OVERLAP = 25  # Default chunk overlap size for feature extraction
