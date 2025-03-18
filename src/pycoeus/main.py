@@ -301,7 +301,11 @@ if __name__ == "__main__":
     neg_labels_path = args.neg_labels
     predictions_path = args.predictions
     feature_type = args.feature_type
+    compute_mode = args.compute_mode
+    chunk_overlap = args.chunk_overlap
+    chunks = args.chunks
 
     read_input_and_labels_and_save_predictions(
-        input_path, pos_labels_path, neg_labels_path, predictions_path, feature_type=feature_type
+        input_path, pos_labels_path, neg_labels_path, predictions_path, feature_type=feature_type,
+        chunks=chunks, chunk_overlap=chunk_overlap, compute_mode=compute_mode
     )
