@@ -2,6 +2,8 @@
 
 ![icon](https://github.com/user-attachments/assets/a3da006f-b762-4248-9266-defa3e1d02ca)
 
+# Pycoeus
+
 Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors. Pycoeus can be used as a standalone commandline tool or as the backend for the QGIS plugin called CoeusAI.
 
 The project setup is documented in [project_setup.md](devdocs/project_setup.md).
