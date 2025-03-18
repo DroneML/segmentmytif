@@ -71,6 +71,7 @@ def test_get_flair_model_file_name_with_invalid_scales(model_scale):
     (0.25, "Huggingface"),
     (0.5, "Huggingface"),
     (1.0, "Huggingface"),
+    (0.25, "Surfdrive"),
     (1.0, "Surfdrive"),
     (1.0, None),
 ])
