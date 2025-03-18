@@ -36,6 +36,7 @@ from .utils import TEST_DATA_FOLDER
                          ], ids=lambda e : str(e))
 def test_integration(tmpdir, test_case: TestCase, feature_type, model_scale, dice_similarity_threshold, compute_mode):
     tmpdir = Path(tmpdir)
+    np.random.seed(0)
 
     input_path = copy_file_and_get_new_path(test_case.image_filename, tmpdir)
     labels_pos_path = copy_file_and_get_new_path(test_case.labels_pos_filename, tmpdir)
