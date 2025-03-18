@@ -54,7 +54,7 @@ def read_input_and_labels_and_save_predictions(
     dask_kwargs = _set_compute_mode(compute_mode, chunks)
 
     # Load raster data
-    raster = read_geotiff(raster_path)
+    raster = read_geotiff(raster_path, **dask_kwargs)
 
     # Ensure the raster has correct crs
     # In QGIS environment, rasterio may not be able to read the crs correctly
