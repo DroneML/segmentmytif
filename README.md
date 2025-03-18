@@ -1,8 +1,8 @@
 [![workflow pypi badge](https://img.shields.io/pypi/v/pycoeus.svg?colorB=blue)](https://pypi.python.org/project/pycoeus/) [![Documentation Status](https://readthedocs.org/projects/pycoeus/badge/?version=latest)](https://pycoeus.readthedocs.io/en/latest/?badge=latest) [![build](https://github.com/DroneML/pycoeus/actions/workflows/build.yml/badge.svg)](https://github.com/DroneML/pycoeus/actions/workflows/build.yml)
 
-<img src="https://github.com/user-attachments/assets/c576c6b0-d507-4bf6-a35b-28de181d4371" width="400" />
+![icon](https://github.com/user-attachments/assets/a3da006f-b762-4248-9266-defa3e1d02ca)
 
-Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors. Pycoeus can be used as a standalone commandline tool or as the backend for the QGIS plugin called DroneML.
+Segment (georeferenced) raster data in an interactive fashion. Retrain models in seconds. Only small amounts of labeled data necessary because of our use of pretrained base models as feature extractors. Pycoeus can be used as a standalone commandline tool or as the backend for the QGIS plugin called CoeusAI.
 
 The project setup is documented in [project_setup.md](devdocs/project_setup.md).
 
