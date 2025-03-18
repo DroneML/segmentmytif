@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = u"segmentmytif"
+project = u"pycoeus"
 copyright = u"2024-10-08 10:55:54, Christiaan Meijer"
 author = u"Christiaan Meijer"
 
@@ -58,7 +58,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Use autoapi.extension to run sphinx-apidoc -------
 
-autoapi_dirs = ['../src/segmentmytif']
+autoapi_dirs = ['../src/pycoeus']
 
 # -- Options for HTML output ----------------------------------------------
 

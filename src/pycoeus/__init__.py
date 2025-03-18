@@ -1,4 +1,4 @@
-"""Documentation about segmentmytif."""
+"""Documentation about pycoeus."""
 
 import logging
 

@@ -1,7 +1,7 @@
 # YAML 1.2
 ---
 cff-version: "1.2.0"
-title: "segmentmytif"
+title: "pycoeus"
 authors:
   - family-names: Meijer
     given-names: Christiaan
@@ -15,7 +15,7 @@ authors:
     orcid: 'https://orcid.org/0000-0002-5373-5209'
 date-released: 2024-10-08
 version: "0.3.0"
-repository-code: "https://github.com/DroneML/segmentmytif"
+repository-code: "https://github.com/DroneML/pycoeus"
 keywords:
   - "Segmentation"
   - " UNet"

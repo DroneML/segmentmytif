@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from torchinfo import summary
 
-from segmentmytif.utils.datasets import normalize_single_band_to_tensor
-from segmentmytif.utils.models import UNet
+from pycoeus.utils.datasets import normalize_single_band_to_tensor
+from pycoeus.utils.models import UNet
 from tests.utils import TEST_DATA_FOLDER
 
 

@@ -4,7 +4,7 @@ from typing import Any, Union
 
 from rioxarray import rioxarray
 
-from segmentmytif.logging_config import log_array
+from pycoeus.logging_config import log_array
 
 logger = logging.getLogger(__name__)
 
